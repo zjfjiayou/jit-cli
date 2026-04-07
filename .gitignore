@@ -1,0 +1,17 @@
+.DS_Store
+
+.idea/
+.vscode/
+
+bin/
+dist/
+scripts/vendor/
+
+coverage.out
+coverage/
+*.coverprofile
+*.test
+*.out
+
+node_modules/
+*.log
