@@ -6,7 +6,7 @@ import (
 	"regexp"
 )
 
-var patPattern = regexp.MustCompile(`^jit_pat_([A-Za-z0-9]+)_([A-Za-z0-9]+)$`)
+var patPattern = regexp.MustCompile(`^jit_pat_([A-Za-z0-9-]+)_([A-Za-z0-9]+)$`)
 
 var ErrInvalidPAT = errors.New("invalid pat format")
 

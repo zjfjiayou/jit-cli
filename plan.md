@@ -158,9 +158,9 @@ jit api <elementPath>/<functionName> --app <org/app> [--data '{}']
 
 # 示例（app 上下文来自 profile.default_app 或 --app）
 jit api services/JitAISvc/sendMessage --data '{"assistantId":"xxx","chatId":"yyy","message":"hello"}'
-jit api auths/loginTypes/services/AuthSvc/listCliTokens --app wanyun/JitAuth
-jit api models/services/ModelSvc/getModelList --app wanyun/JitORM
-jit api models/services/ModelSvc/getModelsMeta --app wanyun/JitORM
+jit api auths/loginTypes/services/AuthSvc/listCliTokens --app wanyun/JitAi
+jit api models/services/ModelSvc/getModelList --app wanyun/JitAi
+jit api models/services/ModelSvc/getModelsMeta --app wanyun/JitAi
 jit api models/Customer/query --data '{"filter":{},"page":1,"size":10}' --app erp_demo/ErpApp
 
 # 全局 flags
@@ -228,29 +228,26 @@ Exit code 约定：
 - `deleteByPK(pkList, triggerEvent)` — 按主键删除
 - `createOrUpdateMany(rowDataList, triggerEvent)` — 批量创建/更新
 
-注意：ModelSvc 位于 JitORM 应用下，模型数据 CRUD 通过各业务 app 下的模型 fullName 路径调用。
-CLI 需要处理两种 app 上下文：
-- `jit model list/meta/info` → 打 JitORM 的 ModelSvc
-- `jit model query/create/update/delete` → 打业务 app 下的具体模型
+注意：当前 CLI 不再把模型浏览能力绑定到 `JitORM` sibling app。所有请求默认都打解析出的业务 app，依赖后端继承机制暴露共享服务；模型列表浏览则优先使用本地 `appInfo.js` 缓存。
 
 ```bash
-# 模型元数据（默认打 JitORM 应用）
-jit model list                                    # → ModelSvc/getModelList
-jit model meta                                    # → ModelSvc/getModelsMeta
-jit model info <fullName>                         # → ModelSvc/getModelInfo
+# 先刷新 appInfo 本地缓存
+jit app refresh
 
-# 模型数据 CRUD（需指定业务 app 或使用 profile 默认 app）
+# 模型浏览
+jit model list                                    # → 读 ~/.jit/profiles/{profile}/appinfo.json，过滤 private
+jit model info <fullName>                         # → ModelSvc/getModelInfo（完整字段定义）
+
+# appInfo 缓存查看
+jit app info
+jit app elements
+
+# 模型数据读取（业务 app 下的具体模型）
 jit model query <fullName> [--filter '{}'] [--page 1] [--size 10] [--app <org/app>]
     # → {app}/models/{fullName}/query
-jit model create <fullName> --data '{}' [--app <org/app>]
-    # → {app}/models/{fullName}/create
-jit model update <fullName> --pk '[]' --data '{}' [--app <org/app>]
-    # → {app}/models/{fullName}/updateByPK
-jit model delete <fullName> --pk '[]' [--app <org/app>]
-    # → {app}/models/{fullName}/deleteByPK
 
-# TQL 查询（打 JitORM 的 ModelSvc）
-jit model select <tql> [--limit 50] [--offset 0]  # → ModelSvc/aiSelect
+# TQL 查询（同样打解析出的业务 app 下的 ModelSvc）
+jit model select <tql> [--limit 50] [--offset 0]  # → {app}/models/services/ModelSvc/aiSelect
 
 # 用户信息
 jit whoami [--profile <name>]

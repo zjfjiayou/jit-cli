@@ -7,6 +7,8 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"jit-cli/internal/output"
 )
 
 func writeJSON(out io.Writer, value any) error {
@@ -49,6 +51,19 @@ func writeResponsePayload(out io.Writer, resp map[string]any) error {
 
 func writeRawPayload(out io.Writer, resp map[string]any) error {
 	return writeRawJSON(out, rawPayload(resp))
+}
+
+func writeValue(out io.Writer, value any, jq string) error {
+	if strings.TrimSpace(jq) == "" {
+		if err := writeJSON(out, value); err != nil {
+			return NewCLIError("output_failed", err.Error())
+		}
+		return nil
+	}
+	if err := output.WriteJQ(out, value, jq, false); err != nil {
+		return NewCLIError("output_failed", err.Error())
+	}
+	return nil
 }
 
 func parseJSONArg(dataArg string, in io.Reader) (json.RawMessage, error) {

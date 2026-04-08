@@ -64,7 +64,7 @@ func (r *appRuntime) AuthLogin(ctx context.Context, input AuthLoginInput) (map[s
 		return rawResponseMap(resp, "")
 	}
 	if resp.Response.IsBusinessError() {
-		return nil, NewCLIError("auth_failed", fmt.Sprintf("PAT is invalid or expired"))
+		return nil, NewCLIError("auth_failed", "PAT is invalid or expired")
 	}
 
 	if err := r.profiles.SaveProfile(profileName, profile.Config{Server: server, DefaultApp: input.App}); err != nil {
@@ -90,7 +90,7 @@ func (r *appRuntime) GetCurrUserInfo(ctx context.Context, input UserInfoInput) (
 		return nil, err
 	}
 
-	baseApp, err := resolveBaseApp(input.App, cfg.DefaultApp)
+	baseApp, err := resolveAppRef(input.App, cfg.DefaultApp)
 	if err != nil {
 		return nil, err
 	}
@@ -153,20 +153,11 @@ func (r *appRuntime) AuthUse(ctx context.Context, profileName string) error {
 }
 
 func (r *appRuntime) ResolveApp(ctx context.Context, profileName string, appOverride string) (string, error) {
-	if strings.TrimSpace(appOverride) != "" {
-		if _, _, err := profile.ParseApp(appOverride); err != nil {
-			return "", NewCLIError("invalid_app", err.Error())
-		}
-		return strings.TrimSpace(appOverride), nil
-	}
 	_, cfg, _, err := r.resolveProfile(profileName)
 	if err != nil {
 		return "", err
 	}
-	if cfg.DefaultApp == "" {
-		return "", NewCLIError("missing_app", "profile does not have default_app, pass --app <org/app>")
-	}
-	return cfg.DefaultApp, nil
+	return resolveAppRef(appOverride, cfg.DefaultApp)
 }
 
 func (r *appRuntime) CallAPI(ctx context.Context, req APIRequest) (APIResponse, error) {
@@ -175,15 +166,9 @@ func (r *appRuntime) CallAPI(ctx context.Context, req APIRequest) (APIResponse, 
 		return APIResponse{}, err
 	}
 
-	appRef := req.App
-	if strings.TrimSpace(appRef) == "" {
-		appRef = cfg.DefaultApp
-	}
-	if appRef == "" {
-		return APIResponse{}, NewCLIError("missing_app", "profile does not have default_app, pass --app <org/app>")
-	}
-	if _, _, err := profile.ParseApp(appRef); err != nil {
-		return APIResponse{}, NewCLIError("invalid_app", err.Error())
+	appRef, err := resolveAppRef(req.App, cfg.DefaultApp)
+	if err != nil {
+		return APIResponse{}, err
 	}
 
 	resp, err := r.client.Call(ctx, client.Request{
@@ -269,34 +254,24 @@ func (r *appRuntime) resolveSelectedProfile(profileName string, missingMessage s
 	return name, nil
 }
 
-func siblingApp(appRef, sibling string) (string, error) {
-	org, _, err := profile.ParseApp(appRef)
-	if err != nil {
-		return "", err
+func resolveAppRef(appOverride string, defaultApp string) (string, error) {
+	appRef := strings.TrimSpace(appOverride)
+	if appRef == "" {
+		appRef = strings.TrimSpace(defaultApp)
 	}
-	return org + "/" + sibling, nil
-}
-
-func resolveBaseApp(appOverride string, defaultApp string) (string, error) {
-	baseApp := strings.TrimSpace(appOverride)
-	if baseApp == "" {
-		baseApp = strings.TrimSpace(defaultApp)
-	}
-	if baseApp == "" {
+	if appRef == "" {
 		return "", NewCLIError("missing_app", "profile does not have default_app, pass --app <org/app>")
 	}
-	return baseApp, nil
+	if _, _, err := profile.ParseApp(appRef); err != nil {
+		return "", NewCLIError("invalid_app", err.Error())
+	}
+	return appRef, nil
 }
 
 func (r *appRuntime) callCurrentUser(ctx context.Context, server string, token string, baseApp string, dryRun bool) (*client.Result, error) {
-	authApp, err := siblingApp(baseApp, "JitAuth")
-	if err != nil {
-		return nil, NewCLIError("invalid_app", err.Error())
-	}
-
 	resp, err := r.client.Call(ctx, client.Request{
 		Server:   server,
-		App:      authApp,
+		App:      baseApp,
 		Endpoint: memberSvcGetCurrUserInfo,
 		Token:    token,
 		Method:   http.MethodPost,
@@ -322,7 +297,7 @@ func resultRaw(result *client.Result, jq string) (json.RawMessage, error) {
 		return json.RawMessage(`null`), nil
 	}
 	if result.DryRun != nil {
-		return marshalCompact(result.DryRun)
+		return json.Marshal(result.DryRun)
 	}
 	if result.Response == nil {
 		return json.RawMessage(`null`), nil
@@ -330,32 +305,10 @@ func resultRaw(result *client.Result, jq string) (json.RawMessage, error) {
 	if strings.TrimSpace(jq) == "" {
 		return append(json.RawMessage(nil), result.Response.RawBody...), nil
 	}
-	values, err := output.ApplyJQ(result.Response.JSON, jq)
-	if err != nil {
-		return nil, err
-	}
 	var buf bytes.Buffer
-	for _, value := range values {
-		switch typed := value.(type) {
-		case string:
-			buf.WriteString(typed)
-			buf.WriteByte('\n')
-		default:
-			data, err := json.Marshal(typed)
-			if err != nil {
-				return nil, err
-			}
-			buf.Write(data)
-			buf.WriteByte('\n')
-		}
+	if err := output.WriteJQ(&buf, result.Response.JSON, jq, false); err != nil {
+		return nil, err
 	}
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
 
-func marshalCompact(value any) (json.RawMessage, error) {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}

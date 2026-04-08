@@ -43,7 +43,7 @@ func TestAuthLoginDryRunRendersRawPreview(t *testing.T) {
 		authLoginFn: func(_ context.Context, input AuthLoginInput) (map[string]any, error) {
 			got = input
 			return map[string]any{
-				"raw": json.RawMessage(`{"method":"POST","url":"http://127.0.0.1:8080/api/wanyun/JitAuth/corps/services/MemberSvc/getCurrUserInfo"}`),
+				"raw": json.RawMessage(`{"method":"POST","url":"http://127.0.0.1:8080/api/wanyun/JitAi/corps/services/MemberSvc/getCurrUserInfo"}`),
 			}, nil
 		},
 	}

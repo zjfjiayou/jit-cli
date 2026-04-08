@@ -19,7 +19,7 @@ func (f *fakeSecretStore) Get(service, user string) (string, error) {
 	if f.getErr != nil {
 		return "", f.getErr
 	}
-	return f.data[service+"/"+user], nil
+	return f.data[f.key(service, user)], nil
 }
 
 func (f *fakeSecretStore) Set(service, user, password string) error {
@@ -29,7 +29,7 @@ func (f *fakeSecretStore) Set(service, user, password string) error {
 	if f.data == nil {
 		f.data = map[string]string{}
 	}
-	f.data[service+"/"+user] = password
+	f.data[f.key(service, user)] = password
 	return nil
 }
 
@@ -37,8 +37,12 @@ func (f *fakeSecretStore) Delete(service, user string) error {
 	if f.deleteErr != nil {
 		return f.deleteErr
 	}
-	delete(f.data, service+"/"+user)
+	delete(f.data, f.key(service, user))
 	return nil
+}
+
+func (f *fakeSecretStore) key(service, user string) string {
+	return service + "/" + user
 }
 
 func TestProfileCRUD(t *testing.T) {
@@ -89,6 +93,14 @@ func TestParsePAT(t *testing.T) {
 	}
 	if parts.TokenID != "abc123" || parts.Secret != "def456" {
 		t.Fatalf("ParsePAT(valid) = %#v", parts)
+	}
+
+	uuidStyle, err := ParsePAT("jit_pat_123e4567-e89b-12d3-a456-426614174000_deadbeef")
+	if err != nil {
+		t.Fatalf("ParsePAT(uuid-style) error = %v", err)
+	}
+	if uuidStyle.TokenID != "123e4567-e89b-12d3-a456-426614174000" || uuidStyle.Secret != "deadbeef" {
+		t.Fatalf("ParsePAT(uuid-style) = %#v", uuidStyle)
 	}
 
 	invalid := []string{

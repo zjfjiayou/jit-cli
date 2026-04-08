@@ -1,13 +1,13 @@
 # JIT CLI
 
-`jit` is a non-interactive CLI for JIT, designed for AI agents and scripts.
-Phase 1 uses PAT (`jit_pat_*`) as the default auth mechanism and reuses existing JIT backend APIs through `Authorization: Bearer <token>`.
+`jit` 是一个面向 JIT 的非交互式命令行工具，主要服务于 AI Agent 和脚本场景。
+一期默认使用 PAT（`jit_pat_*`）作为鉴权方式，通过 `Authorization: Bearer <token>` 直接复用现有 JIT 后端接口。
 
-## Install
+## 安装
 
-### 1. Download binary from Release
+### 1. 从 Release 下载二进制
 
-Expected release assets (from GoReleaser):
+GoReleaser 预期产物如下：
 
 - `jit-darwin-amd64.tar.gz`
 - `jit-darwin-arm64.tar.gz`
@@ -16,55 +16,55 @@ Expected release assets (from GoReleaser):
 - `jit-windows-amd64.zip`
 - `jit-windows-arm64.zip`
 
-After extracting:
+解压后执行：
 
 ```bash
 chmod +x jit
 mv jit ~/.local/bin/jit
 ```
 
-### 2. Install via script
+### 2. 使用安装脚本
 
-Linux/macOS:
+Linux/macOS：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | sh
 ```
 
-Windows PowerShell:
+Windows PowerShell：
 
 ```powershell
 irm https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.ps1 | iex
 ```
 
-Optional install env vars:
+可选安装环境变量：
 
-- `JIT_CLI_REPO` (default: `wanyun/JitCli`)
-- `JIT_CLI_VERSION` (default: `latest`)
-- `JIT_CLI_INSTALL_DIR` (default: `~/.local/bin` on Unix, `~/.local/bin` on Windows PowerShell)
+- `JIT_CLI_REPO`：仓库名，默认 `wanyun/JitCli`
+- `JIT_CLI_VERSION`：版本号，默认 `latest`
+- `JIT_CLI_INSTALL_DIR`：安装目录，默认 Unix 为 `~/.local/bin`，PowerShell 为 `~/.local/bin`
 
-## Authentication (PAT + Profile)
+## 认证（PAT + Profile）
 
-Create a PAT in JIT Web personal center, then login:
+先在 JIT Web 个人中心创建 PAT，再执行登录：
 
 ```bash
 jit auth login --server https://demo.jit.cn --app wanyun/JitAi --token jit_pat_xxx_yyy
 ```
 
-Or pipe token via stdin:
+也可以通过 stdin 传入 token：
 
 ```bash
 printf '%s' 'jit_pat_xxx_yyy' | jit auth login --server https://demo.jit.cn --app wanyun/JitAi
 ```
 
-Check current identity:
+查看当前身份：
 
 ```bash
 jit auth status
 jit whoami
 ```
 
-Profile operations:
+常用 profile 操作：
 
 ```bash
 jit auth list
@@ -72,68 +72,99 @@ jit auth use demo
 jit auth logout --profile demo
 ```
 
-## API Usage
+## API 用法
 
-Raw API gateway (default: current profile + `default_app`):
+原始 API 网关调用，默认使用当前 profile 的 `default_app`：
 
 ```bash
 jit api services/JitAISvc/sendMessage --data '{"assistantId":"a","chatId":"c","message":"hello"}'
 ```
 
-Specify app explicitly:
+显式指定 app：
 
 ```bash
-jit api auths/loginTypes/services/AuthSvc/listCliTokens --app wanyun/JitAuth
+jit api auths/loginTypes/services/AuthSvc/listCliTokens --app wanyun/JitAi
 ```
 
-Model examples:
+AppInfo 缓存相关命令：
 
 ```bash
+jit app refresh
+jit app info
+jit app elements
+```
+
+服务快捷命令：
+
+```bash
+jit service list
+jit service list --filter attendance
+jit service exec corps.services.AttendanceSvc getAttendanceColumns --data '{"corpFullName":"corps.Default"}'
+```
+
+模型相关示例：
+
+```bash
+jit app refresh
 jit model list
-jit model meta
 jit model info wanyun.crm.Customer
 jit model query wanyun.crm.Customer --filter '{}' --page 1 --size 10 --app erp_demo/ErpApp
 ```
 
-Global flags:
+`jit model` 说明：
+
+- `jit model` 始终使用解析出的业务 app：若传入 `--app <org/app>` 则优先使用，否则回退到 profile 的 `default_app`。
+- CLI 不再自行推导 `JitAuth`、`JitORM` 这类兄弟应用，共享服务由后端继承机制负责解析。
+- `jit model list` 读取本地缓存的 `appInfo.js` 结果，只返回非 private 的模型元素。
+- 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
+- `jit model info` 仍然调用 `ModelSvc/getModelInfo`，完整字段定义以后端接口为准。
+
+`jit service` 说明：
+
+- `jit service list` 读取本地 `appInfo.js` 缓存，列出所有非 private 且带有 `functionList` 的元素。
+- 某些实际可调用的服务不会出现在列表里，例如来源于继承链、且在源 app 中被标记为 `private` 的服务；这类服务仍可以通过 `jit service exec` 或 `jit api` 直接调用。
+- `jit service exec` 仅在元素命中缓存时校验 `functionName`；如果元素不在缓存中，则跳过预校验，最终以后端返回结果为准。
+- 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
+
+全局参数：
 
 - `--profile <name>`
 - `--app <org/app>`
 - `--jq <expr>`
-- `--format json` (Phase 1 only)
+- `--format json`：一期仅支持 JSON
 - `--dry-run`
 
-## Exit Codes
+## 退出码
 
-- `0`: request success and backend `errcode == 0`
-- `1`: request success but backend `errcode != 0` (business error)
-- `2`: CLI-side error (network/auth/invalid args/profile not found, etc.)
+- `0`：请求成功，且后端 `errcode == 0`
+- `1`：请求成功，但后端 `errcode != 0`，属于业务错误
+- `2`：CLI 侧错误，例如网络错误、鉴权失败、参数非法、profile 不存在等
 
-`jit api` prints backend raw response to stdout.
-CLI-side errors are printed as JSON to stderr.
+`jit api` 会将后端原始响应输出到 stdout。
+CLI 自身错误会以 JSON 形式输出到 stderr。
 
-## Build and Release
+## 构建与发布
 
-Local build:
+本地构建：
 
 ```bash
 make build
 ```
 
-Run tests:
+运行测试：
 
 ```bash
 make test
 ```
 
-GoReleaser snapshot:
+生成 GoReleaser snapshot：
 
 ```bash
 make snapshot
 ```
 
-## Notes
+## 说明
 
-- Phase 1 is JSON-first and script-friendly.
-- `--format table` is intentionally not included in Phase 1.
-- `jit api` does not wrap backend payload into a custom CLI envelope.
+- 一期以 JSON 输出和脚本友好为主。
+- 一期刻意不提供 `--format table`。
+- `jit api` 不会再额外包一层 CLI 自定义响应结构。

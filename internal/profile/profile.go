@@ -89,13 +89,8 @@ func (m *Manager) SaveProfile(name string, cfg Config) error {
 		return err
 	}
 
-	server, err := NormalizeServer(cfg.Server)
+	cfg, _, err = normalizeConfig(cfg)
 	if err != nil {
-		return err
-	}
-	cfg.Server = server
-
-	if err := validateDefaultApp(cfg.DefaultApp); err != nil {
 		return err
 	}
 
@@ -123,12 +118,17 @@ func (m *Manager) LoadProfile(name string) (Config, error) {
 		return cfg, fmt.Errorf("parse profile config %q: %w", name, err)
 	}
 
-	cfg.Server, err = NormalizeServer(cfg.Server)
+	var invalidField string
+	cfg, invalidField, err = normalizeConfig(cfg)
 	if err != nil {
-		return cfg, fmt.Errorf("invalid server in profile %q: %w", name, err)
-	}
-	if err := validateDefaultApp(cfg.DefaultApp); err != nil {
-		return cfg, fmt.Errorf("invalid default app in profile %q: %w", name, err)
+		switch invalidField {
+		case "server":
+			return cfg, fmt.Errorf("invalid server in profile %q: %w", name, err)
+		case "default_app":
+			return cfg, fmt.Errorf("invalid default app in profile %q: %w", name, err)
+		default:
+			return cfg, err
+		}
 	}
 	return cfg, nil
 }
@@ -275,6 +275,10 @@ func (m *Manager) CredentialsPath(name string) string {
 	return filepath.Join(m.ProfileDir(name), "credentials")
 }
 
+func (m *Manager) AppInfoPath(name string) string {
+	return filepath.Join(m.ProfileDir(name), "appinfo.json")
+}
+
 func (m *Manager) accountName(name string) string {
 	return m.serviceName + ":" + NormalizeProfileName(name)
 }
@@ -293,6 +297,18 @@ func validateDefaultApp(app string) error {
 	}
 	_, _, err := ParseApp(app)
 	return err
+}
+
+func normalizeConfig(cfg Config) (Config, string, error) {
+	server, err := NormalizeServer(cfg.Server)
+	if err != nil {
+		return Config{}, "server", err
+	}
+	cfg.Server = server
+	if err := validateDefaultApp(cfg.DefaultApp); err != nil {
+		return Config{}, "default_app", err
+	}
+	return cfg, "", nil
 }
 
 func NormalizeProfileName(name string) string {
@@ -348,12 +364,4 @@ func ParseApp(app string) (string, string, error) {
 		return "", "", errors.New("app must be in org/app format")
 	}
 	return parts[0], parts[1], nil
-}
-
-func ResolveORMApp(app string) (string, error) {
-	org, _, err := ParseApp(app)
-	if err != nil {
-		return "", err
-	}
-	return org + "/JitORM", nil
 }

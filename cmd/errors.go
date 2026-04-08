@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 )
 
 type CLIError struct {
@@ -31,18 +32,14 @@ func (e *ExitCodeOnlyError) Error() string {
 	return fmt.Sprintf("exit with code %d", e.Code)
 }
 
-func writeCLIErrorJSON(writable WriterFlusher, cliErr *CLIError) {
+func writeCLIErrorJSON(w io.Writer, cliErr *CLIError) {
 	if cliErr == nil {
 		return
 	}
 	data, err := json.Marshal(cliErr)
 	if err != nil {
-		_, _ = writable.Write([]byte(`{"error":"internal_error","message":"failed to marshal error"}` + "\n"))
+		_, _ = w.Write([]byte(`{"error":"internal_error","message":"failed to marshal error"}` + "\n"))
 		return
 	}
-	_, _ = writable.Write(append(data, '\n'))
-}
-
-type WriterFlusher interface {
-	Write([]byte) (int, error)
+	_, _ = w.Write(append(data, '\n'))
 }

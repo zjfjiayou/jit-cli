@@ -386,22 +386,22 @@ func (c *Command) printHelp() {
 		_, _ = fmt.Fprintln(out, c.Short)
 		_, _ = fmt.Fprintln(out)
 	}
-	_, _ = fmt.Fprintln(out, "Usage:")
+	_, _ = fmt.Fprintln(out, "用法:")
 	_, _ = fmt.Fprintf(out, "  %s\n", c.usageLine())
 
 	if len(c.children) > 0 {
 		_, _ = fmt.Fprintln(out)
-		_, _ = fmt.Fprintln(out, "Available Commands:")
+		_, _ = fmt.Fprintln(out, "可用命令:")
 		for _, child := range c.children {
 			_, _ = fmt.Fprintf(out, "  %-12s %s\n", child.name(), child.Short)
 		}
 	}
 
 	if flags := c.PersistentFlags(); flags != nil && len(flags.defs) > 0 {
-		c.printFlags(out, "Global Flags:", flags)
+		c.printFlags(out, "全局参数:", flags)
 	}
 	if flags := c.Flags(); flags != nil && len(flags.defs) > 0 {
-		c.printFlags(out, "Flags:", flags)
+		c.printFlags(out, "参数:", flags)
 	}
 }
 
@@ -415,7 +415,7 @@ func (c *Command) printFlags(out io.Writer, title string, flags *FlagSet) {
 		}
 		line := fmt.Sprintf("  --%-12s %s", def.name, def.usage)
 		if def.required {
-			line += " (required)"
+			line += "（必填）"
 		}
 		_, _ = fmt.Fprintln(out, line)
 	}
@@ -515,7 +515,7 @@ func ensureRequired(flags *FlagSet) error {
 	}
 	for _, def := range flags.defs {
 		if def.required && !def.seen {
-			return fmt.Errorf("required flag(s) %q not set", "--"+def.name)
+			return fmt.Errorf("必填参数 %q 未设置", "--"+def.name)
 		}
 	}
 	return nil

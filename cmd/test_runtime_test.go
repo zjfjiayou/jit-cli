@@ -89,3 +89,16 @@ func runCmdForTest(t *testing.T, args []string, stdin string, rt Runtime) (int, 
 	}
 	return code, stdout.String(), stderr.String()
 }
+
+func runHelpForTest(t *testing.T, args []string) string {
+	t.Helper()
+
+	var out bytes.Buffer
+	root := NewRootCmd(NewDefaultFactory())
+	root.SetOut(&out)
+	root.SetArgs(args)
+	if err := root.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	return out.String()
+}

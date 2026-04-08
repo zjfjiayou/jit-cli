@@ -71,15 +71,13 @@ func (c *Client) Call(ctx context.Context, req Request) (*Result, error) {
 	}
 
 	if req.DryRun {
+		headers := requestHeaders(req.Token)
 		return &Result{
 			DryRun: &DryRunRequest{
-				Method: method,
-				URL:    urlValue,
-				Headers: map[string]string{
-					"Authorization": "Bearer " + strings.TrimSpace(req.Token),
-					"Content-Type":  "application/json",
-				},
-				Body: bodyValue,
+				Method:  method,
+				URL:     urlValue,
+				Headers: headers,
+				Body:    bodyValue,
 			},
 		}, nil
 	}
@@ -88,8 +86,9 @@ func (c *Client) Call(ctx context.Context, req Request) (*Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+strings.TrimSpace(req.Token))
-	httpReq.Header.Set("Content-Type", "application/json")
+	for key, value := range requestHeaders(req.Token) {
+		httpReq.Header.Set(key, value)
+	}
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
@@ -104,7 +103,12 @@ func (c *Client) Call(ctx context.Context, req Request) (*Result, error) {
 
 	var payload any
 	if err := json.Unmarshal(rawBody, &payload); err != nil {
-		return nil, fmt.Errorf("decode response json: %w", err)
+		return nil, fmt.Errorf(
+			"decode response json (status %d): %w; response preview: %q",
+			resp.StatusCode,
+			err,
+			responsePreview(rawBody),
+		)
 	}
 
 	errCode, hasErrCode := extractErrCode(payload)
@@ -188,5 +192,25 @@ func extractInt(value any) (int, bool) {
 		return int(n), true
 	default:
 		return 0, false
+	}
+}
+
+func responsePreview(rawBody []byte) string {
+	const maxPreview = 200
+
+	trimmed := bytes.TrimSpace(rawBody)
+	if len(trimmed) == 0 {
+		return ""
+	}
+	if len(trimmed) <= maxPreview {
+		return string(trimmed)
+	}
+	return string(trimmed[:maxPreview]) + "...(truncated)"
+}
+
+func requestHeaders(token string) map[string]string {
+	return map[string]string{
+		"Authorization": "Bearer " + strings.TrimSpace(token),
+		"Content-Type":  "application/json",
 	}
 }

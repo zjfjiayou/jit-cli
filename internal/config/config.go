@@ -36,10 +36,6 @@ func ResolveHomeDir() (string, error) {
 	return filepath.Join(userHome, defaultDir), nil
 }
 
-func ResolveHome() (string, error) {
-	return ResolveHomeDir()
-}
-
 func DefaultGlobalConfig() GlobalConfig {
 	return normalizeGlobalConfig(GlobalConfig{})
 }

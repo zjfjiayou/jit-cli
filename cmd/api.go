@@ -10,7 +10,7 @@ func newAPICmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	var dataArg string
 	cmd := &cobra.Command{
 		Use:   "api <elementPath/functionName>",
-		Short: "raw API gateway, transparently prints backend response",
+		Short: "原始 API 网关，透传输出后端响应",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			body, err := parseJSONArg(dataArg, f.IO.In)
@@ -30,7 +30,7 @@ func newAPICmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&dataArg, "data", "{}", "request body JSON, or @- to read from stdin")
+	cmd.Flags().StringVar(&dataArg, "data", "{}", "请求体 JSON；传 @- 表示从 stdin 读取")
 	return cmd
 }
 

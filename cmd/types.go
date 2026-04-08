@@ -20,8 +20,6 @@ const (
 
 const (
 	memberSvcGetCurrUserInfo = "corps/services/MemberSvc/getCurrUserInfo"
-	modelSvcGetModelList     = "models/services/ModelSvc/getModelList"
-	modelSvcGetModelsMeta    = "models/services/ModelSvc/getModelsMeta"
 	modelSvcGetModelInfo     = "models/services/ModelSvc/getModelInfo"
 	modelSvcAISelect         = "models/services/ModelSvc/aiSelect"
 )

@@ -46,3 +46,27 @@ func TestWriteJQ(t *testing.T) {
 		t.Fatalf("WriteJQ() output = %q, want %q", got, "1\n2\n")
 	}
 }
+
+func TestApplyJQSupportsPipeSelectAndIndex(t *testing.T) {
+	payload := map[string]any{
+		"items": []map[string]any{
+			{"id": 1},
+			{"id": 2},
+		},
+	}
+
+	results, err := ApplyJQ(payload, `.items | map(select(.id > 1)) | .[0].id`)
+	if err != nil {
+		t.Fatalf("ApplyJQ() error = %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("len(results) = %d, want 1", len(results))
+	}
+	got, ok := results[0].(float64)
+	if !ok {
+		t.Fatalf("result type = %T, want float64", results[0])
+	}
+	if got != 2 {
+		t.Fatalf("result = %v, want 2", got)
+	}
+}

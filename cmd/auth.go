@@ -9,7 +9,7 @@ import (
 func newAuthCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
-		Short: "PAT and profile management",
+		Short: "PAT 与 profile 管理",
 	}
 
 	cmd.AddCommand(newAuthLoginCmd(f, gf))
@@ -29,7 +29,7 @@ func newAuthLoginCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "login with PAT and create/update a profile",
+		Short: "使用 PAT 登录并创建或更新 profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if strings.TrimSpace(server) == "" {
 				return NewCLIError("missing_server", "--server is required")
@@ -64,17 +64,17 @@ func newAuthLoginCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&server, "server", "", "JIT server URL")
-	cmd.Flags().StringVar(&app, "app", "", "default app in org/app format")
-	cmd.Flags().StringVar(&token, "token", "", "PAT value, reads from stdin when omitted")
-	cmd.Flags().StringVar(&profile, "profile", "", "profile name")
+	cmd.Flags().StringVar(&server, "server", "", "JIT 服务地址")
+	cmd.Flags().StringVar(&app, "app", "", "默认应用，格式为 org/app")
+	cmd.Flags().StringVar(&token, "token", "", "PAT 值；省略时从 stdin 读取")
+	cmd.Flags().StringVar(&profile, "profile", "", "profile 名称")
 	return cmd
 }
 
 func newAuthStatusCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
-		Short: "validate PAT and show current user info",
+		Short: "校验 PAT 并显示当前用户信息",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			resp, err := f.Runtime.GetCurrUserInfo(cmd.Context(), UserInfoInput{
 				Profile: gf.Profile,
@@ -94,7 +94,7 @@ func newAuthLogoutCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	var localProfile string
 	cmd := &cobra.Command{
 		Use:   "logout",
-		Short: "remove PAT from a profile",
+		Short: "移除指定 profile 的 PAT",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			profile := firstNonEmpty(localProfile, gf.Profile)
 			if err := f.Runtime.AuthLogout(cmd.Context(), profile); err != nil {
@@ -107,14 +107,14 @@ func newAuthLogoutCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 			return writeJSON(f.IO.Out, payload)
 		},
 	}
-	cmd.Flags().StringVar(&localProfile, "profile", "", "profile name override")
+	cmd.Flags().StringVar(&localProfile, "profile", "", "覆盖当前使用的 profile 名称")
 	return cmd
 }
 
 func newAuthListCmd(f *Factory, _ *GlobalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "list profiles",
+		Short: "列出所有 profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			items, err := f.Runtime.AuthList(cmd.Context())
 			if err != nil {
@@ -130,7 +130,7 @@ func newAuthListCmd(f *Factory, _ *GlobalFlags) *cobra.Command {
 func newAuthUseCmd(f *Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "use <profile>",
-		Short: "switch current profile",
+		Short: "切换当前 profile",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := f.Runtime.AuthUse(cmd.Context(), args[0]); err != nil {

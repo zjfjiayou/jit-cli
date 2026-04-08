@@ -36,19 +36,13 @@ func ParseEndpointRef(value string) (EndpointRef, error) {
 
 	idx := strings.LastIndex(clean, "/")
 	if idx <= 0 || idx == len(clean)-1 {
-		return EndpointRef{}, fmt.Errorf(
-			"invalid endpoint format %q, expected elementPath/functionName",
-			value,
-		)
+		return EndpointRef{}, invalidEndpointFormatError(value)
 	}
 
 	elementPath := clean[:idx]
 	functionName := clean[idx+1:]
 	if elementPath == "" || functionName == "" {
-		return EndpointRef{}, fmt.Errorf(
-			"invalid endpoint format %q, expected elementPath/functionName",
-			value,
-		)
+		return EndpointRef{}, invalidEndpointFormatError(value)
 	}
 
 	return EndpointRef{
@@ -100,4 +94,8 @@ func BuildURL(server, app, endpoint string) (string, error) {
 		strings.Trim(endpointRef.ElementPath, "/"),
 		endpointRef.FunctionName,
 	), nil
+}
+
+func invalidEndpointFormatError(value string) error {
+	return fmt.Errorf("invalid endpoint format %q, expected elementPath/functionName", value)
 }
