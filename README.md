@@ -28,18 +28,18 @@ mv jit ~/.local/bin/jit
 Linux/macOS：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/zjfjiayou/jit-cli/main/scripts/install.sh | sh
 ```
 
 Windows PowerShell：
 
 ```powershell
-irm https://raw.githubusercontent.com/${OWNER}/${REPO}/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/zjfjiayou/jit-cli/main/scripts/install.ps1 | iex
 ```
 
 可选安装环境变量：
 
-- `JIT_CLI_REPO`：仓库名，默认 `wanyun/JitCli`
+- `JIT_CLI_REPO`：仓库名，默认 `zjfjiayou/jit-cli`
 - `JIT_CLI_VERSION`：版本号，默认 `latest`
 - `JIT_CLI_INSTALL_DIR`：安装目录，默认 Unix 为 `~/.local/bin`，PowerShell 为 `~/.local/bin`
 

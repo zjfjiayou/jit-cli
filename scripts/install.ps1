@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Repo = if ($env:JIT_CLI_REPO) { $env:JIT_CLI_REPO } else { "wanyun/JitCli" }
+$Repo = if ($env:JIT_CLI_REPO) { $env:JIT_CLI_REPO } else { "zjfjiayou/jit-cli" }
 $BinName = if ($env:JIT_CLI_BIN_NAME) { $env:JIT_CLI_BIN_NAME } else { "jit" }
 $InstallDir = if ($env:JIT_CLI_INSTALL_DIR) { $env:JIT_CLI_INSTALL_DIR } else { Join-Path $HOME ".local\bin" }
 $Version = if ($env:JIT_CLI_VERSION) { $env:JIT_CLI_VERSION } else { "latest" }

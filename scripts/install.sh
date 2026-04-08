@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-REPO="${JIT_CLI_REPO:-wanyun/JitCli}"
+REPO="${JIT_CLI_REPO:-zjfjiayou/jit-cli}"
 BIN_NAME="${JIT_CLI_BIN_NAME:-jit}"
 INSTALL_DIR="${JIT_CLI_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${JIT_CLI_VERSION:-latest}"

@@ -8,7 +8,7 @@ const cp = require("child_process");
 
 const pkg = require("../package.json");
 const version = pkg.version;
-const repo = process.env.JIT_CLI_REPO || "wanyun/JitCli";
+const repo = process.env.JIT_CLI_REPO || "zjfjiayou/jit-cli";
 const binName = process.env.JIT_CLI_BIN_NAME || "jit";
 
 const platformMap = {
