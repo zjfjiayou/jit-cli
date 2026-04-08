@@ -58,6 +58,14 @@ func TestSaveLoadAndElements(t *testing.T) {
 		t.Fatalf("AppID = %q, want whwy/mmm", cached.App.AppID)
 	}
 
+	localElements := ElementsLocal(&cached.App)
+	if len(localElements) != 1 {
+		t.Fatalf("len(ElementsLocal) = %d, want 1", len(localElements))
+	}
+	if localElements[0].FullName != "services.PublicSvc" {
+		t.Fatalf("unexpected local elements: %#v", localElements)
+	}
+
 	elements := Elements(&cached.App)
 	if len(elements) != 2 {
 		t.Fatalf("len(Elements) = %d, want 2", len(elements))

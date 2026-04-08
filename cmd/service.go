@@ -30,12 +30,13 @@ func newServiceCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 
 func newServiceListCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	var filter string
+	var all bool
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "列出缓存中暴露可调用函数的元素",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cached, elements, err := loadCachedElements(gf.Profile, gf.App)
+			cached, elements, err := loadCachedElements(gf.Profile, gf.App, all)
 			if err != nil {
 				return err
 			}
@@ -62,6 +63,7 @@ func newServiceListCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&all, "all", false, "包含 extendApps 中集成的服务")
 	cmd.Flags().StringVar(&filter, "filter", "", "按 fullName/title 做不区分大小写的关键字过滤")
 	return cmd
 }

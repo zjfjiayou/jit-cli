@@ -84,6 +84,117 @@ func TestServiceListReadsCacheAndFiltersByKeyword(t *testing.T) {
 	}
 }
 
+func TestServiceListDefaultsToLocalAppOnly(t *testing.T) {
+	setupCachedAppProfile(t, profile.Config{
+		Server:     "http://127.0.0.1:8080",
+		DefaultApp: "whwy/mmm",
+	}, &appinfo.AppInfo{
+		AppID: "whwy/mmm",
+		Elements: map[string]appinfo.ElementDefine{
+			"corps.services.MemberSvc": {
+				FullName: "corps.services.MemberSvc",
+				Name:     "MemberSvc",
+				Title:    "Member Service",
+				Type:     "services.NormalType",
+				FunctionList: []appinfo.FunctionDef{{
+					Name: "getCurrUserInfo",
+				}},
+			},
+		},
+		ExtendApps: []appinfo.AppInfo{{
+			AppID: "whwy/base",
+			Elements: map[string]appinfo.ElementDefine{
+				"corps.services.ExtendedSvc": {
+					FullName: "corps.services.ExtendedSvc",
+					Name:     "ExtendedSvc",
+					Title:    "Extended Service",
+					Type:     "services.NormalType",
+					FunctionList: []appinfo.FunctionDef{{
+						Name: "ping",
+					}},
+				},
+			},
+		}},
+	})
+
+	code, stdout, errOut := runCmdForTest(t, []string{
+		"--profile", "demo",
+		"service", "list",
+	}, "", mockRuntime{})
+	if code != ExitOK {
+		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
+	}
+
+	var payload struct {
+		Services []serviceListItem `json:"services"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, stdout=%s", err, stdout)
+	}
+	if len(payload.Services) != 1 {
+		t.Fatalf("len(services) = %d, want 1; stdout=%s", len(payload.Services), stdout)
+	}
+	if payload.Services[0].FullName != "corps.services.MemberSvc" {
+		t.Fatalf("unexpected default service list: %#v", payload.Services)
+	}
+}
+
+func TestServiceListAllIncludesExtendedServices(t *testing.T) {
+	setupCachedAppProfile(t, profile.Config{
+		Server:     "http://127.0.0.1:8080",
+		DefaultApp: "whwy/mmm",
+	}, &appinfo.AppInfo{
+		AppID: "whwy/mmm",
+		Elements: map[string]appinfo.ElementDefine{
+			"corps.services.MemberSvc": {
+				FullName: "corps.services.MemberSvc",
+				Name:     "MemberSvc",
+				Title:    "Member Service",
+				Type:     "services.NormalType",
+				FunctionList: []appinfo.FunctionDef{{
+					Name: "getCurrUserInfo",
+				}},
+			},
+		},
+		ExtendApps: []appinfo.AppInfo{{
+			AppID: "whwy/base",
+			Elements: map[string]appinfo.ElementDefine{
+				"corps.services.ExtendedSvc": {
+					FullName: "corps.services.ExtendedSvc",
+					Name:     "ExtendedSvc",
+					Title:    "Extended Service",
+					Type:     "services.NormalType",
+					FunctionList: []appinfo.FunctionDef{{
+						Name: "ping",
+					}},
+				},
+			},
+		}},
+	})
+
+	code, stdout, errOut := runCmdForTest(t, []string{
+		"--profile", "demo",
+		"service", "list",
+		"--all",
+	}, "", mockRuntime{})
+	if code != ExitOK {
+		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
+	}
+
+	var payload struct {
+		Services []serviceListItem `json:"services"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, stdout=%s", err, stdout)
+	}
+	if len(payload.Services) != 2 {
+		t.Fatalf("len(services) = %d, want 2; stdout=%s", len(payload.Services), stdout)
+	}
+	if payload.Services[0].FullName != "corps.services.MemberSvc" || payload.Services[1].FullName != "corps.services.ExtendedSvc" {
+		t.Fatalf("unexpected service list --all: %#v", payload.Services)
+	}
+}
+
 func TestServiceExecValidatesCachedElementAndFunction(t *testing.T) {
 	setupCachedAppProfile(t, profile.Config{
 		Server:     "http://127.0.0.1:8080",

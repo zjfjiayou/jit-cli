@@ -24,11 +24,13 @@ func newModelCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 }
 
 func newModelListCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
-	return &cobra.Command{
+	var all bool
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "列出 appInfo 缓存中的模型",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, elements, err := loadCachedElements(gf.Profile, gf.App)
+			_, elements, err := loadCachedElements(gf.Profile, gf.App, all)
 			if err != nil {
 				return err
 			}
@@ -44,6 +46,9 @@ func newModelListCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 			return writeValue(f.IO.Out, map[string]any{"data": items}, gf.JQ)
 		},
 	}
+
+	cmd.Flags().BoolVar(&all, "all", false, "包含 extendApps 中集成的模型")
+	return cmd
 }
 
 func newModelInfoCmd(f *Factory, gf *GlobalFlags) *cobra.Command {

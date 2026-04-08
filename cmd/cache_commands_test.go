@@ -93,11 +93,61 @@ func TestModelListReadsCacheAndFiltersPrivateElements(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v, stdout=%s", err, stdout)
 	}
+	if len(payload.Data) != 1 {
+		t.Fatalf("len(data) = %d, want 1; stdout=%s", len(payload.Data), stdout)
+	}
+	if payload.Data[0].FullName != "models.PublicModel" {
+		t.Fatalf("unexpected model list: %#v", payload.Data)
+	}
+}
+
+func TestModelListAllIncludesExtendedModels(t *testing.T) {
+	setupCachedAppProfile(t, profile.Config{
+		Server:     "http://127.0.0.1:8080",
+		DefaultApp: "whwy/mmm",
+	}, &appinfo.AppInfo{
+		AppID: "whwy/mmm",
+		Elements: map[string]appinfo.ElementDefine{
+			"models.PublicModel": {
+				FullName: "models.PublicModel",
+				Name:     "PublicModel",
+				Title:    "Public Model",
+				Type:     "models.NormalType",
+			},
+		},
+		ExtendApps: []appinfo.AppInfo{{
+			AppID: "whwy/base",
+			Elements: map[string]appinfo.ElementDefine{
+				"pays.models.OrderModel": {
+					FullName: "pays.models.OrderModel",
+					Name:     "OrderModel",
+					Title:    "Order",
+					Type:     "models.NormalType",
+				},
+			},
+		}},
+	})
+
+	code, stdout, errOut := runCmdForTest(t, []string{
+		"--profile", "demo",
+		"model", "list",
+		"--all",
+	}, "", mockRuntime{})
+	if code != ExitOK {
+		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
+	}
+
+	var payload struct {
+		Data []elementSummary `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &payload); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, stdout=%s", err, stdout)
+	}
 	if len(payload.Data) != 2 {
 		t.Fatalf("len(data) = %d, want 2; stdout=%s", len(payload.Data), stdout)
 	}
 	if payload.Data[0].FullName != "models.PublicModel" || payload.Data[1].FullName != "pays.models.OrderModel" {
-		t.Fatalf("unexpected model list: %#v", payload.Data)
+		t.Fatalf("unexpected model list --all: %#v", payload.Data)
 	}
 }
 

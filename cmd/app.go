@@ -105,7 +105,7 @@ func newAppElementsCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 		Use:   "elements",
 		Short: "列出缓存中所有非 private 元素",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cached, elements, err := loadCachedElements(gf.Profile, gf.App)
+			cached, elements, err := loadCachedElements(gf.Profile, gf.App, true)
 			if err != nil {
 				return err
 			}

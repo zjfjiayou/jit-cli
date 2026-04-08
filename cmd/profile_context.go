@@ -95,10 +95,13 @@ func loadCachedAppInfo(profileName string, appOverride string) (profileContext, 
 	return ctx, cached, nil
 }
 
-func loadCachedElements(profileName string, appOverride string) (*appinfo.CachedAppInfo, []appinfo.ElementDefine, error) {
+func loadCachedElements(profileName string, appOverride string, includeExtended bool) (*appinfo.CachedAppInfo, []appinfo.ElementDefine, error) {
 	_, cached, err := loadCachedAppInfo(profileName, appOverride)
 	if err != nil {
 		return nil, nil, err
 	}
-	return cached, appinfo.Elements(&cached.App), nil
+	if includeExtended {
+		return cached, appinfo.Elements(&cached.App), nil
+	}
+	return cached, appinfo.ElementsLocal(&cached.App), nil
 }

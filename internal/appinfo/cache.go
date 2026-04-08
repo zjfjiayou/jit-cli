@@ -41,6 +41,14 @@ func Load(path string) (*CachedAppInfo, error) {
 }
 
 func Elements(info *AppInfo) []ElementDefine {
+	return elements(info, true)
+}
+
+func ElementsLocal(info *AppInfo) []ElementDefine {
+	return elements(info, false)
+}
+
+func elements(info *AppInfo, includeExtended bool) []ElementDefine {
 	if info == nil {
 		return nil
 	}
@@ -77,8 +85,10 @@ func Elements(info *AppInfo) []ElementDefine {
 			out = append(out, element)
 		}
 
-		for i := range app.ExtendApps {
-			walk(&app.ExtendApps[i])
+		if includeExtended {
+			for i := range app.ExtendApps {
+				walk(&app.ExtendApps[i])
+			}
 		}
 	}
 	walk(info)
