@@ -15,3 +15,4 @@ coverage/
 
 node_modules/
 *.log
+plan.md
