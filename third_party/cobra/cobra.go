@@ -87,6 +87,7 @@ type Command struct {
 	Use               string
 	Short             string
 	Long              string
+	Example           string
 	Version           string
 	SilenceErrors     bool
 	SilenceUsage      bool
@@ -382,8 +383,15 @@ func (c *Command) usageLine() string {
 
 func (c *Command) printHelp() {
 	out := c.output()
-	if c.Short != "" {
-		_, _ = fmt.Fprintln(out, c.Short)
+	short := strings.TrimSpace(c.Short)
+	long := strings.TrimSpace(c.Long)
+	example := strings.TrimSpace(c.Example)
+	if short != "" {
+		_, _ = fmt.Fprintln(out, short)
+		_, _ = fmt.Fprintln(out)
+	}
+	if long != "" {
+		_, _ = fmt.Fprintln(out, long)
 		_, _ = fmt.Fprintln(out)
 	}
 	_, _ = fmt.Fprintln(out, "用法:")
@@ -402,6 +410,11 @@ func (c *Command) printHelp() {
 	}
 	if flags := c.Flags(); flags != nil && len(flags.defs) > 0 {
 		c.printFlags(out, "参数:", flags)
+	}
+	if example != "" {
+		_, _ = fmt.Fprintln(out)
+		_, _ = fmt.Fprintln(out, "示例:")
+		_, _ = fmt.Fprintln(out, example)
 	}
 }
 

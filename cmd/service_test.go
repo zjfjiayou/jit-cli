@@ -56,7 +56,7 @@ func TestServiceListReadsCacheAndFiltersByKeyword(t *testing.T) {
 
 	code, stdout, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"service", "list",
+		"service", "ls",
 		"--filter", "member",
 	}, "", mockRuntime{})
 	if code != ExitOK {
@@ -119,7 +119,7 @@ func TestServiceListDefaultsToLocalAppOnly(t *testing.T) {
 
 	code, stdout, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"service", "list",
+		"service", "ls",
 	}, "", mockRuntime{})
 	if code != ExitOK {
 		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
@@ -174,7 +174,7 @@ func TestServiceListAllIncludesExtendedServices(t *testing.T) {
 
 	code, stdout, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"service", "list",
+		"service", "ls",
 		"--all",
 	}, "", mockRuntime{})
 	if code != ExitOK {
@@ -224,7 +224,7 @@ func TestServiceExecValidatesCachedElementAndFunction(t *testing.T) {
 
 	code, _, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"service", "exec", "corps.services.MemberSvc", "badFunc",
+		"service", "call", "corps.services.MemberSvc", "badFunc",
 	}, "", rt)
 	if code != ExitCLIError {
 		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitCLIError, code, errOut)
@@ -236,7 +236,7 @@ func TestServiceExecValidatesCachedElementAndFunction(t *testing.T) {
 	// element not in cache (inherited/private) → passes through to backend
 	code, _, errOut = runCmdForTest(t, []string{
 		"--profile", "demo",
-		"service", "exec", "nonexist.Svc", "someFunc",
+		"service", "call", "nonexist.Svc", "someFunc",
 	}, "", rt)
 	if code != ExitOK {
 		t.Fatalf("expected exit %d (passthrough), got %d, stderr=%s", ExitOK, code, errOut)
@@ -266,7 +266,7 @@ func TestServiceExecWithoutCacheFallsBackToAPIRequest(t *testing.T) {
 		"--profile", "demo",
 		"--app", "whwy/mmm",
 		"--dry-run",
-		"service", "exec", "corps.services.MemberSvc", "getCurrUserInfo",
+		"service", "call", "corps.services.MemberSvc", "getCurrUserInfo",
 		"--data", `{"userId":"admin123"}`,
 	}, "", rt)
 	if code != ExitOK {

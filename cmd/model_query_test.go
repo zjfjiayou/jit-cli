@@ -82,3 +82,41 @@ func TestModelQueryDefaultsToNilFilter(t *testing.T) {
 		t.Fatalf("filter = %#v, want nil", argDict["filter"])
 	}
 }
+
+func TestModelTQLUsesAISelectEndpoint(t *testing.T) {
+	var got APIRequest
+	rt := mockRuntime{
+		callAPIFn: func(_ context.Context, req APIRequest) (APIResponse, error) {
+			got = req
+			return APIResponse{Raw: json.RawMessage(`{"errcode":0}`)}, nil
+		},
+		resolveAppFn: func(_ context.Context, _, _ string) (string, error) {
+			return "whwy/mmm", nil
+		},
+	}
+
+	code, _, errOut := runCmdForTest(t, []string{
+		"--profile", "demo",
+		"model", "tql", "select * from models.Customer limit 10",
+		"--limit", "20",
+		"--offset", "5",
+	}, "", rt)
+	if code != ExitOK {
+		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
+	}
+
+	if got.Endpoint != modelSvcAISelect {
+		t.Fatalf("unexpected endpoint: %+v", got)
+	}
+
+	var body map[string]any
+	if err := json.Unmarshal(got.Body, &body); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+	if body["tql"] != "select * from models.Customer limit 10" {
+		t.Fatalf("tql = %#v, want raw expr", body["tql"])
+	}
+	if body["limit"] != float64(20) || body["offset"] != float64(5) {
+		t.Fatalf("unexpected pagination payload: %#v", body)
+	}
+}

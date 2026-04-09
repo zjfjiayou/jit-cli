@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"jit-cli/internal/client"
@@ -79,7 +80,7 @@ func (r *appRuntime) AuthLogin(ctx context.Context, input AuthLoginInput) (map[s
 
 	payload, ok := resp.Response.JSON.(map[string]any)
 	if !ok {
-		return nil, NewCLIError("invalid_response", "expected object response from auth status")
+		return nil, NewCLIError("invalid_response", "expected object response from current user request")
 	}
 	return payload, nil
 }
@@ -122,6 +123,28 @@ func (r *appRuntime) AuthLogout(ctx context.Context, profileName string) error {
 	return nil
 }
 
+func (r *appRuntime) AuthRemove(ctx context.Context, profileName string) error {
+	name, err := r.requireExistingProfileName(profileName)
+	if err != nil {
+		return err
+	}
+	if err := r.profiles.DeleteProfile(name); err != nil {
+		return NewCLIError("remove_profile_failed", err.Error())
+	}
+	return r.clearCurrentProfileIfMatches(name)
+}
+
+func (r *appRuntime) clearCurrentProfileIfMatches(profileName string) error {
+	cfg, err := r.loadGlobalConfig()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(cfg.CurrentProfile) != profileName {
+		return nil
+	}
+	return r.setCurrentProfile("")
+}
+
 func (r *appRuntime) AuthList(ctx context.Context) ([]ProfileSummary, error) {
 	cfg, err := r.loadGlobalConfig()
 	if err != nil {
@@ -133,11 +156,12 @@ func (r *appRuntime) AuthList(ctx context.Context) ([]ProfileSummary, error) {
 	}
 
 	result := make([]ProfileSummary, 0, len(items))
-	for _, item := range items {
+	for idx, item := range items {
 		result = append(result, ProfileSummary{
 			Name:       item.Name,
 			Server:     item.Server,
 			DefaultApp: item.DefaultApp,
+			Index:      idx,
 			Current:    item.Current,
 			HasToken:   item.HasToken,
 		})
@@ -145,11 +169,15 @@ func (r *appRuntime) AuthList(ctx context.Context) ([]ProfileSummary, error) {
 	return result, nil
 }
 
-func (r *appRuntime) AuthUse(ctx context.Context, profileName string) error {
-	if !r.profiles.Exists(profileName) {
-		return NewCLIError("profile_not_found", fmt.Sprintf("profile %q does not exist", profileName))
+func (r *appRuntime) AuthUse(ctx context.Context, profileName string) (string, error) {
+	name, err := r.resolveProfileSelector(profileName)
+	if err != nil {
+		return "", err
 	}
-	return r.setCurrentProfile(profileName)
+	if err := r.setCurrentProfile(name); err != nil {
+		return "", err
+	}
+	return name, nil
 }
 
 func (r *appRuntime) ResolveApp(ctx context.Context, profileName string, appOverride string) (string, error) {
@@ -223,7 +251,7 @@ func (r *appRuntime) setCurrentProfile(profileName string) error {
 	if err != nil {
 		return err
 	}
-	cfg.CurrentProfile = profileName
+	cfg.CurrentProfile = strings.TrimSpace(profileName)
 	if err := r.configSvc.Save(cfg); err != nil {
 		return NewCLIError("save_config_failed", err.Error())
 	}
@@ -242,6 +270,55 @@ func (r *appRuntime) resolveSelectedProfile(profileName string, missingMessage s
 	name = strings.TrimSpace(cfg.CurrentProfile)
 	if name == "" {
 		return "", NewCLIError("missing_profile", missingMessage)
+	}
+	return name, nil
+}
+
+func (r *appRuntime) resolveProfileSelector(selector string) (string, error) {
+	name, err := requiredProfileName(selector)
+	if err != nil {
+		return "", err
+	}
+	if r.profiles.Exists(name) {
+		return name, nil
+	}
+	return r.resolveProfileIndex(name)
+}
+
+func (r *appRuntime) resolveProfileIndex(value string) (string, error) {
+	index, err := strconv.Atoi(value)
+	if err != nil {
+		return "", NewCLIError("profile_not_found", fmt.Sprintf("profile %q does not exist", value))
+	}
+	if index < 0 {
+		return "", NewCLIError("profile_index_out_of_range", fmt.Sprintf("profile index %d is out of range", index))
+	}
+
+	names, err := r.profiles.ListProfiles()
+	if err != nil {
+		return "", NewCLIError("list_profiles_failed", err.Error())
+	}
+	if index >= len(names) {
+		return "", NewCLIError("profile_index_out_of_range", fmt.Sprintf("profile index %d is out of range", index))
+	}
+	return names[index], nil
+}
+
+func (r *appRuntime) requireExistingProfileName(profileName string) (string, error) {
+	name, err := requiredProfileName(profileName)
+	if err != nil {
+		return "", err
+	}
+	if !r.profiles.Exists(name) {
+		return "", NewCLIError("profile_not_found", fmt.Sprintf("profile %q does not exist", name))
+	}
+	return name, nil
+}
+
+func requiredProfileName(profileName string) (string, error) {
+	name := strings.TrimSpace(profileName)
+	if name == "" {
+		return "", NewCLIError("missing_profile", "profile is required")
 	}
 	return name, nil
 }

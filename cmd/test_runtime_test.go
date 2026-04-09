@@ -11,8 +11,9 @@ type mockRuntime struct {
 	authLoginFn       func(context.Context, AuthLoginInput) (map[string]any, error)
 	getCurrUserInfoFn func(context.Context, UserInfoInput) (map[string]any, error)
 	authLogoutFn      func(context.Context, string) error
+	authRemoveFn      func(context.Context, string) error
 	authListFn        func(context.Context) ([]ProfileSummary, error)
-	authUseFn         func(context.Context, string) error
+	authUseFn         func(context.Context, string) (string, error)
 	resolveAppFn      func(context.Context, string, string) (string, error)
 	callAPIFn         func(context.Context, APIRequest) (APIResponse, error)
 }
@@ -38,6 +39,13 @@ func (m mockRuntime) AuthLogout(ctx context.Context, profile string) error {
 	return nil
 }
 
+func (m mockRuntime) AuthRemove(ctx context.Context, profile string) error {
+	if m.authRemoveFn != nil {
+		return m.authRemoveFn(ctx, profile)
+	}
+	return nil
+}
+
 func (m mockRuntime) AuthList(ctx context.Context) ([]ProfileSummary, error) {
 	if m.authListFn != nil {
 		return m.authListFn(ctx)
@@ -45,11 +53,11 @@ func (m mockRuntime) AuthList(ctx context.Context) ([]ProfileSummary, error) {
 	return []ProfileSummary{}, nil
 }
 
-func (m mockRuntime) AuthUse(ctx context.Context, profile string) error {
+func (m mockRuntime) AuthUse(ctx context.Context, profile string) (string, error) {
 	if m.authUseFn != nil {
 		return m.authUseFn(ctx, profile)
 	}
-	return nil
+	return profile, nil
 }
 
 func (m mockRuntime) ResolveApp(ctx context.Context, profile string, appOverride string) (string, error) {

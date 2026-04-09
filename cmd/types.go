@@ -62,8 +62,9 @@ type Runtime interface {
 	AuthLogin(ctx context.Context, input AuthLoginInput) (map[string]any, error)
 	GetCurrUserInfo(ctx context.Context, input UserInfoInput) (map[string]any, error)
 	AuthLogout(ctx context.Context, profile string) error
+	AuthRemove(ctx context.Context, profile string) error
 	AuthList(ctx context.Context) ([]ProfileSummary, error)
-	AuthUse(ctx context.Context, profile string) error
+	AuthUse(ctx context.Context, profile string) (string, error)
 	ResolveApp(ctx context.Context, profile string, appOverride string) (string, error)
 	CallAPI(ctx context.Context, req APIRequest) (APIResponse, error)
 }
@@ -87,6 +88,7 @@ type ProfileSummary struct {
 	Name       string `json:"name"`
 	Server     string `json:"server"`
 	DefaultApp string `json:"default_app"`
+	Index      int    `json:"index"`
 	Current    bool   `json:"current"`
 	HasToken   bool   `json:"has_token"`
 }
@@ -126,12 +128,16 @@ func (u unwiredRuntime) AuthLogout(context.Context, string) error {
 	return newUnwiredRuntimeError()
 }
 
+func (u unwiredRuntime) AuthRemove(context.Context, string) error {
+	return newUnwiredRuntimeError()
+}
+
 func (u unwiredRuntime) AuthList(context.Context) ([]ProfileSummary, error) {
 	return nil, newUnwiredRuntimeError()
 }
 
-func (u unwiredRuntime) AuthUse(context.Context, string) error {
-	return newUnwiredRuntimeError()
+func (u unwiredRuntime) AuthUse(context.Context, string) (string, error) {
+	return "", newUnwiredRuntimeError()
 }
 
 func (u unwiredRuntime) ResolveApp(context.Context, string, string) (string, error) {

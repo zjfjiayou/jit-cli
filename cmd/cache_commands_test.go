@@ -18,7 +18,7 @@ func TestModelListRequiresAppInfoCache(t *testing.T) {
 
 	code, _, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"model", "list",
+		"model", "ls",
 	}, "", mockRuntime{})
 	if code != ExitCLIError {
 		t.Fatalf("expected exit %d, got %d", ExitCLIError, code)
@@ -81,7 +81,7 @@ func TestModelListReadsCacheAndFiltersPrivateElements(t *testing.T) {
 
 	code, stdout, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"model", "list",
+		"model", "ls",
 	}, "", mockRuntime{})
 	if code != ExitOK {
 		t.Fatalf("expected exit %d, got %d, stderr=%s", ExitOK, code, errOut)
@@ -130,7 +130,7 @@ func TestModelListAllIncludesExtendedModels(t *testing.T) {
 
 	code, stdout, errOut := runCmdForTest(t, []string{
 		"--profile", "demo",
-		"model", "list",
+		"model", "ls",
 		"--all",
 	}, "", mockRuntime{})
 	if code != ExitOK {

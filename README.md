@@ -60,17 +60,23 @@ printf '%s' 'jit_pat_xxx_yyy' | jit auth login --server https://demo.jit.cn --ap
 查看当前身份：
 
 ```bash
-jit auth status
+jit auth whoami
 jit whoami
 ```
 
 常用 profile 操作：
 
 ```bash
-jit auth list
+jit auth ls
 jit auth use demo
+jit auth use 0
 jit auth logout --profile demo
+jit auth rm demo
 ```
+
+- `jit auth logout`：只删除 profile 对应的 PAT，保留 profile 配置
+- `jit auth rm`：删除整个 profile，包括配置、PAT 和本地缓存
+- `jit auth ls` 会按当前输出顺序给每个 profile 标注 `index`，可直接用于 `jit auth use <index>`
 
 ## API 用法
 
@@ -90,26 +96,27 @@ AppInfo 缓存相关命令：
 
 ```bash
 jit app refresh
-jit app info
-jit app elements
+jit app get
+jit app ls
 ```
 
 服务快捷命令：
 
 ```bash
-jit service list
-jit service list --all
-jit service list --filter attendance
-jit service exec corps.services.AttendanceSvc getAttendanceColumns --data '{"corpFullName":"corps.Default"}'
+jit service ls
+jit service ls --all
+jit service ls --filter attendance
+jit service call corps.services.AttendanceSvc getAttendanceColumns --data '{"corpFullName":"corps.Default"}'
 ```
 
 模型相关示例：
 
 ```bash
 jit app refresh
-jit model list
-jit model list --all
-jit model info wanyun.crm.Customer
+jit model ls
+jit model ls --all
+jit model get wanyun.crm.Customer
+jit model tql 'select * from models.Customer limit 10'
 jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --page 1 --size 10 --app erp_demo/ErpApp
 ```
 
@@ -117,18 +124,19 @@ jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --page 1 
 
 - `jit model` 始终使用解析出的业务 app：若传入 `--app <org/app>` 则优先使用，否则回退到 profile 的 `default_app`。
 - CLI 不再自行推导 `JitAuth`、`JitORM` 这类兄弟应用，共享服务由后端继承机制负责解析。
-- `jit model list` 读取本地缓存的 `appInfo.js` 结果，默认只返回当前 app 自身的非 private 模型元素。
-- 传入 `jit model list --all` 时，会把 `extendApps` 中集成进来的模型也一起列出。
+- `jit model ls` 读取本地缓存的 `appInfo.js` 结果，默认只返回当前 app 自身的非 private 模型元素。
+- 传入 `jit model ls --all` 时，会把 `extendApps` 中集成进来的模型也一起列出。
 - 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
-- `jit model info` 仍然调用 `ModelSvc/getModelInfo`，完整字段定义以后端接口为准。
+- `jit model get` 仍然调用 `ModelSvc/getModelInfo`，完整字段定义以后端接口为准。
+- `jit model tql` 通过 `ModelSvc/aiSelect` 执行 TQL 查询。
 - `jit model query --filter` 传的是 Q 表达式字符串；省略时会按空过滤查询，不再把过滤条件当作 JSON 对象发送。
 
 `jit service` 说明：
 
-- `jit service list` 读取本地 `appInfo.js` 缓存，默认只列出当前 app 自身中非 private 且带有 `functionList` 的元素。
-- 传入 `jit service list --all` 时，会把 `extendApps` 中集成进来的服务也一起列出。
-- 某些实际可调用的服务不会出现在列表里，例如来源于继承链、且在源 app 中被标记为 `private` 的服务；这类服务仍可以通过 `jit service exec` 或 `jit api` 直接调用。
-- `jit service exec` 仅在元素命中缓存时校验 `functionName`；如果元素不在缓存中，则跳过预校验，最终以后端返回结果为准。
+- `jit service ls` 读取本地 `appInfo.js` 缓存，默认只列出当前 app 自身中非 private 且带有 `functionList` 的元素。
+- 传入 `jit service ls --all` 时，会把 `extendApps` 中集成进来的服务也一起列出。
+- 某些实际可调用的服务不会出现在列表里，例如来源于继承链、且在源 app 中被标记为 `private` 的服务；这类服务仍可以通过 `jit service call` 或 `jit api` 直接调用。
+- `jit service call` 仅在元素命中缓存时校验 `functionName`；如果元素不在缓存中，则跳过预校验，最终以后端返回结果为准。
 - 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
 
 全局参数：

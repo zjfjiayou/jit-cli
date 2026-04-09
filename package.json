@@ -1,6 +1,6 @@
 {
   "name": "@jit-cli/jit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "JIT CLI npm wrapper (downloads platform binary)",
   "license": "UNLICENSED",
   "bin": {
