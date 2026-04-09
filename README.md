@@ -110,7 +110,7 @@ jit app refresh
 jit model list
 jit model list --all
 jit model info wanyun.crm.Customer
-jit model query wanyun.crm.Customer --filter '{}' --page 1 --size 10 --app erp_demo/ErpApp
+jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --page 1 --size 10 --app erp_demo/ErpApp
 ```
 
 `jit model` 说明：
@@ -121,6 +121,7 @@ jit model query wanyun.crm.Customer --filter '{}' --page 1 --size 10 --app erp_d
 - 传入 `jit model list --all` 时，会把 `extendApps` 中集成进来的模型也一起列出。
 - 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
 - `jit model info` 仍然调用 `ModelSvc/getModelInfo`，完整字段定义以后端接口为准。
+- `jit model query --filter` 传的是 Q 表达式字符串；省略时会按空过滤查询，不再把过滤条件当作 JSON 对象发送。
 
 `jit service` 说明：
 

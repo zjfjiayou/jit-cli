@@ -93,20 +93,27 @@ func newModelQueryCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 		Short: "查询模型数据",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			filter, err := parseJSONValue(filterArg)
-			if err != nil {
-				return NewCLIError("invalid_filter", err.Error())
+			filter := strings.TrimSpace(filterArg)
+			var filterValue any
+			if filter != "" && !strings.EqualFold(filter, "null") {
+				filterValue = filter
 			}
+
 			body, _ := json.Marshal(map[string]any{
-				"filter": filter,
-				"page":   page,
-				"size":   size,
+				"methodType": "cls",
+				"argDict": map[string]any{
+					"filter":    filterValue,
+					"fieldList": nil,
+					"orderList": nil,
+					"page":      page,
+					"size":      size,
+				},
 			})
 			endpoint := fmt.Sprintf("%s/query", modelPath(args[0]))
 			return runModelSvcCall(cmd, f, gf, endpoint, body)
 		},
 	}
-	cmd.Flags().StringVar(&filterArg, "filter", "{}", "查询过滤条件 JSON")
+	cmd.Flags().StringVar(&filterArg, "filter", "", `查询过滤条件 Q 表达式字符串，例如 Q("name", "=", "Alice")`)
 	cmd.Flags().IntVar(&page, "page", 1, "页码")
 	cmd.Flags().IntVar(&size, "size", 10, "每页条数")
 	return cmd

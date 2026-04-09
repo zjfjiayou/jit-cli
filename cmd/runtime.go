@@ -171,17 +171,9 @@ func (r *appRuntime) CallAPI(ctx context.Context, req APIRequest) (APIResponse, 
 		return APIResponse{}, err
 	}
 
-	resp, err := r.client.Call(ctx, client.Request{
-		Server:   cfg.Server,
-		App:      appRef,
-		Endpoint: req.Endpoint,
-		Token:    token,
-		Method:   req.Method,
-		Body:     req.Body,
-		DryRun:   req.DryRun,
-	})
+	resp, err := r.callAppRequest(ctx, cfg.Server, token, appRef, req.Endpoint, req.Method, req.Body, req.DryRun)
 	if err != nil {
-		return APIResponse{}, NewCLIError("request_failed", err.Error())
+		return APIResponse{}, err
 	}
 
 	raw, err := resultRaw(resp, req.JQ)
@@ -269,13 +261,30 @@ func resolveAppRef(appOverride string, defaultApp string) (string, error) {
 }
 
 func (r *appRuntime) callCurrentUser(ctx context.Context, server string, token string, baseApp string, dryRun bool) (*client.Result, error) {
+	resp, err := r.callAppRequest(ctx, server, token, baseApp, memberSvcGetCurrUserInfo, http.MethodPost, map[string]any{}, dryRun)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (r *appRuntime) callAppRequest(
+	ctx context.Context,
+	server string,
+	token string,
+	appRef string,
+	endpoint string,
+	method string,
+	body any,
+	dryRun bool,
+) (*client.Result, error) {
 	resp, err := r.client.Call(ctx, client.Request{
 		Server:   server,
-		App:      baseApp,
-		Endpoint: memberSvcGetCurrUserInfo,
+		App:      appRef,
+		Endpoint: endpoint,
 		Token:    token,
-		Method:   http.MethodPost,
-		Body:     map[string]any{},
+		Method:   method,
+		Body:     body,
 		DryRun:   dryRun,
 	})
 	if err != nil {
@@ -311,4 +320,3 @@ func resultRaw(result *client.Result, jq string) (json.RawMessage, error) {
 	}
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
-
