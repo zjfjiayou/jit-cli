@@ -3,6 +3,24 @@
 `jit` 是一个面向 JIT 的非交互式命令行工具，主要服务于 AI Agent 和脚本场景。
 一期默认使用 PAT（`jit_pat_*`）作为鉴权方式，通过 `Authorization: Bearer <token>` 直接复用现有 JIT 后端接口。
 
+## 内置 Agent Skill
+
+仓库内置了一份给 Agent 使用的 `jit` skill，路径如下：
+
+```text
+resources/skills/builtin/jit/SKILL.md
+```
+
+这份 skill 面向已经安装好 `jit` CLI 的 Agent 运行环境，约束 Agent 先查本地 help，再按 `auth`、`app`、`model`、`service`、`api` 等命令族选择正确命令，避免凭记忆臆造参数或查询语法。
+
+如果任务涉及 TQL 或 Q 表达式，skill 还会引用同目录下的参考文档：
+
+```text
+resources/skills/builtin/jit/references/tql-query-guide.md
+```
+
+如果你要把 JitCli 集成到自己的 Agent/技能系统，可以直接复用这套目录结构。
+
 ## 安装
 
 ### 1. 从 Release 下载二进制
