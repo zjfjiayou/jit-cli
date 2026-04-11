@@ -1,6 +1,6 @@
 # TQL 与 Q 表达式参考
 
-当 `jit model tql --help` 或 `jit model query --help` 还不够时，阅读本文件。
+当 `jit model analyze --help` 或 `jit model query --help` 还不够时，阅读本文件。
 
 ## 先确认元数据
 
@@ -11,7 +11,7 @@
 
 ## 命令选择
 
-- 已经有完整 TQL 语句时，使用 `jit model tql '<TQL>'`
+- 已经有完整 TQL 语句时，使用 `jit model analyze '<TQL>'`
 - 可以表达成“模型 + Q 表达式筛选”时，使用 `jit model query <fullModelName> --filter '<Q expression>' --page <n> --size <n>`
 - 不确定字段、模型、继承来的元素时，先用 `jit model ls|get` 检查，不要直接猜
 
@@ -561,7 +561,7 @@ jit model query wanyun.crm.Customer --filter 'Q(Q("status", "=", "active"), Q.AN
 jit model query wanyun.crm.Customer --filter 'Q("createTime", "range", ["2026-01-01 00:00:00", "2026-01-31 23:59:59"])' --page 1 --size 20
 ```
 
-## `jit model tql` 示例
+## `jit model analyze` 示例
 
 简单查询：
 

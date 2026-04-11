@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"jit-cli/internal/appinfo"
@@ -13,12 +14,12 @@ import (
 func newModelCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "model",
-		Short: "模型浏览与数据查询快捷命令",
+		Short: "模型浏览与原子数据操作命令",
 		Long: helpSections(
 			helpSection(
 				"这组命令是什么",
 				"`model` 用来处理数据模型元素。这里的模型通常是形如 `models.Customer` 的业务数据定义。",
-				"`model ls` 用缓存找模型目录，`model get` 查实时模型定义，`model query` 查模型数据，`model tql` 则走 TQL 查询入口。",
+				"`model ls` 用缓存找模型目录，`model get` 查实时模型定义，`model query` 查模型明细，`model create/update/delete` 执行原子写操作，`model analyze` 走分析查询入口。",
 			),
 			helpSection(
 				"什么时候使用",
@@ -49,8 +50,11 @@ func newModelCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 
 	cmd.AddCommand(newModelLsCmd(f, gf))
 	cmd.AddCommand(newModelGetCmd(f, gf))
-	cmd.AddCommand(newModelTQLCmd(f, gf))
 	cmd.AddCommand(newModelQueryCmd(f, gf))
+	cmd.AddCommand(newModelCreateCmd(f, gf))
+	cmd.AddCommand(newModelUpdateCmd(f, gf))
+	cmd.AddCommand(newModelDeleteCmd(f, gf))
+	cmd.AddCommand(newModelAnalyzeCmd(f, gf))
 	return cmd
 }
 
@@ -160,20 +164,20 @@ func newModelGetCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	}
 }
 
-func newModelTQLCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
+func newModelAnalyzeCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	var limit int
 	var offset int
 	cmd := &cobra.Command{
-		Use:   "tql <expr>",
-		Short: "通过 ModelSvc/aiSelect 执行 TQL 查询",
+		Use:   "analyze <tql>",
+		Short: "执行模型统计与分析查询",
 		Long: helpSections(
 			helpSection(
 				"这是什么",
-				"把一段 TQL 表达式发送到 `ModelSvc/aiSelect`，用于执行面向模型选择的查询。",
+				"把一段 TQL 表达式发送到 `ModelSvc/aiSelect`，用于执行统计、聚合、趋势、排行或多模型关联分析。",
 			),
 			helpSection(
 				"什么时候使用",
-				"当你已经明确要用 TQL 表达式，而不是按某个具体模型执行标准 `query` 时使用。",
+				"当你要做统计分析，而不是读取某个模型的明细记录列表时使用。",
 			),
 			helpSection(
 				"输入说明",
@@ -190,13 +194,13 @@ func newModelTQLCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 			),
 			helpSection(
 				"如果它不适合",
-				"如果你已经知道目标模型 fullName，并且只想查这个模型的数据，改用 `jit model query <fullName>`。",
+				"如果你只想按过滤条件分页读取某个模型的明细数据，改用 `jit model query <fullName>`。",
 			),
 		),
 		Example: helpExamples(
 			helpExample{
-				Description: "执行一条 TQL，并限制返回 20 条",
-				Command:     `jit model tql 'select models.Customer' --limit 20`,
+				Description: "执行一条模型分析 TQL，并限制返回 20 条",
+				Command:     `jit model analyze 'Select([F("id"), F("name")], From(["models.Customer"]), Limit(0, 20))' --limit 20`,
 			},
 		),
 		Args: cobra.ExactArgs(1),
@@ -216,29 +220,34 @@ func newModelTQLCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 
 func newModelQueryCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	var filterArg string
+	var fieldsArg string
+	var orderArg string
 	var page int
 	var size int
+	var level int
 	cmd := &cobra.Command{
 		Use:   "query <fullName>",
-		Short: "查询模型数据",
+		Short: "查询模型明细数据",
 		Long: helpSections(
 			helpSection(
 				"这是什么",
-				"按模型类方法协议调用 `<modelPath>/query`，查询某个具体模型的业务数据。",
+				"按 AI 原子查询协议调用 `<modelPath>/aiQuery`，读取某个具体模型的明细记录列表。",
 			),
 			helpSection(
 				"什么时候使用",
-				"当你已经知道模型 fullName，并且想用标准分页查询拿数据时使用。",
+				"当你已经知道模型 fullName，并且想按过滤条件、字段、排序和分页规则读取记录时使用。",
 			),
 			helpSection(
 				"输入说明",
 				"位置参数是模型 fullName，例如 `models.Customer`。",
-				"`--filter` 传的是 Q 表达式字符串；省略时会按空过滤查询。",
-				"`--page` 和 `--size` 分别控制页码与每页条数。",
+				"`--filter` 传的是 Q 表达式字符串；省略或传 `null` 时表示不过滤。",
+				"`--fields` 传 JSON 数组字符串，例如 `[\"id\",\"name\"]`。",
+				"`--order` 传 JSON 数组字符串，例如 `[[\"id\",-1]]` 或 `[\"-id\"]`。",
+				"`--page`、`--size` 和 `--level` 分别控制页码、每页条数和关联层级。",
 			),
 			helpSection(
 				"数据来源",
-				"会实际请求目标模型的 `query` 接口，请求体中包含 `methodType=cls` 和 `argDict`。",
+				"会实际请求目标模型的 `aiQuery` 接口，请求体中包含 `qfilter`、`fieldList`、`orderList`、`page`、`size` 和 `level`。",
 			),
 			helpSection(
 				"输出说明",
@@ -247,45 +256,292 @@ func newModelQueryCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 			helpSection(
 				"如果它不适合",
 				"如果你要查看模型结构而不是模型数据，改用 `jit model get`。",
-				"如果你需要的是 TQL 能力，改用 `jit model tql`。",
+				"如果你需要的是统计、聚合或分析能力，改用 `jit model analyze`。",
 			),
 		),
 		Example: helpExamples(
 			helpExample{
-				Description: "查询 Customer 模型第一页数据",
+				Description: "查询 Customer 模型第一页明细数据",
 				Command:     "jit model query models.Customer",
 			},
 			helpExample{
-				Description: "带 Q 表达式过滤查询 Customer 数据",
-				Command:     `jit model query models.Customer --filter 'Q("name", "=", "Alice")' --page 1 --size 20`,
+				Description: "带过滤、字段和排序查询 Customer 明细数据",
+				Command:     `jit model query models.Customer --filter 'Q("name", "=", "Alice")' --fields '["id","name"]' --order '[["id",-1]]' --page 1 --size 20`,
 			},
 		),
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			filter := strings.TrimSpace(filterArg)
-			var filterValue any
-			if filter != "" && !strings.EqualFold(filter, "null") {
-				filterValue = filter
+			fieldList, err := parseOptionalJSONArrayArg(fieldsArg, "--fields")
+			if err != nil {
+				return err
 			}
+			orderList, err := parseOptionalJSONArrayArg(orderArg, "--order")
+			if err != nil {
+				return err
+			}
+			filterValue := optionalFilterValue(filterArg)
 
-			body, _ := json.Marshal(map[string]any{
-				"methodType": "cls",
-				"argDict": map[string]any{
-					"filter":    filterValue,
-					"fieldList": nil,
-					"orderList": nil,
-					"page":      page,
-					"size":      size,
-				},
+			return runModelClassMethodCall(cmd, f, gf, args[0], "aiQuery", map[string]any{
+				"qfilter":   filterValue,
+				"fieldList": fieldList,
+				"orderList": orderList,
+				"page":      page,
+				"size":      size,
+				"level":     level,
 			})
-			endpoint := fmt.Sprintf("%s/query", modelPath(args[0]))
-			return runModelSvcCall(cmd, f, gf, endpoint, body)
 		},
 	}
 	cmd.Flags().StringVar(&filterArg, "filter", "", `查询过滤条件 Q 表达式字符串，例如 Q("name", "=", "Alice")`)
+	cmd.Flags().StringVar(&fieldsArg, "fields", "", `返回字段 JSON 数组，例如 ["id","name"]`)
+	cmd.Flags().StringVar(&orderArg, "order", "", `排序 JSON 数组，例如 [["id",-1]] 或 ["-id"]`)
 	cmd.Flags().IntVar(&page, "page", 1, "页码")
-	cmd.Flags().IntVar(&size, "size", 10, "每页条数")
+	cmd.Flags().IntVar(&size, "size", 20, "每页条数")
+	cmd.Flags().IntVar(&level, "level", 2, "关联层级")
 	return cmd
+}
+
+func newModelCreateCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
+	var dataArg string
+	var triggerEvent int
+
+	cmd := &cobra.Command{
+		Use:   "create <fullName>",
+		Short: "创建模型记录",
+		Long: helpSections(
+			helpSection(
+				"这是什么",
+				"按 AI 原子创建协议调用 `<modelPath>/aiCreate`，向模型新增一条记录。",
+			),
+			helpSection(
+				"什么时候使用",
+				"当你已经知道模型 fullName，并且要直接创建一条业务记录时使用。",
+			),
+			helpSection(
+				"输入说明",
+				"位置参数是模型 fullName，例如 `models.Customer`。",
+				"`--data` 必须是 JSON 对象；传 `@-` 时从 stdin 读取。",
+				"`--trigger-event` 控制是否触发事件，默认 1。",
+			),
+			helpSection(
+				"数据来源",
+				"会实际请求目标模型的 `aiCreate` 接口，请求体中包含 `data` 和 `triggerEvent`。",
+			),
+			helpSection(
+				"输出说明",
+				"输出后端返回的原始 JSON，不做二次包装。",
+			),
+		),
+		Example: helpExamples(
+			helpExample{
+				Description: "创建一条 Customer 记录",
+				Command:     `jit model create models.Customer --data '{"name":"Alice"}'`,
+			},
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			data, err := parseRequiredJSONObjectArg(dataArg, f.IO.In, "--data")
+			if err != nil {
+				return err
+			}
+
+			return runModelClassMethodCall(cmd, f, gf, args[0], "aiCreate", map[string]any{
+				"data":         data,
+				"triggerEvent": triggerEvent,
+			})
+		},
+	}
+
+	cmd.Flags().StringVar(&dataArg, "data", "", "创建数据 JSON 对象；传 @- 表示从 stdin 读取")
+	cmd.Flags().IntVar(&triggerEvent, "trigger-event", 1, "是否触发事件，1 开启，0 关闭")
+	return cmd
+}
+
+func newModelUpdateCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
+	var filterArg string
+	var dataArg string
+	var triggerEvent int
+
+	cmd := &cobra.Command{
+		Use:   "update <fullName>",
+		Short: "更新模型记录",
+		Long: helpSections(
+			helpSection(
+				"这是什么",
+				"按 AI 原子更新协议调用 `<modelPath>/aiUpdate`，按过滤条件批量更新模型记录。",
+			),
+			helpSection(
+				"什么时候使用",
+				"当你已经知道模型 fullName，并且要按条件修改已有业务数据时使用。",
+			),
+			helpSection(
+				"输入说明",
+				"位置参数是模型 fullName，例如 `models.Customer`。",
+				"`--filter` 必须是非空 Q 表达式字符串。",
+				"`--data` 必须是 JSON 对象；传 `@-` 时从 stdin 读取。",
+				"`--trigger-event` 控制是否触发事件，默认 1。",
+			),
+			helpSection(
+				"数据来源",
+				"会实际请求目标模型的 `aiUpdate` 接口，请求体中包含 `qfilter`、`updateData` 和 `triggerEvent`。",
+			),
+			helpSection(
+				"输出说明",
+				"输出后端返回的原始 JSON，不做二次包装。",
+			),
+		),
+		Example: helpExamples(
+			helpExample{
+				Description: "按条件更新 Customer 记录",
+				Command:     `jit model update models.Customer --filter 'Q("id","=",1)' --data '{"name":"Bob"}'`,
+			},
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			filter, err := requireNonEmptyFilter(filterArg)
+			if err != nil {
+				return err
+			}
+			data, err := parseRequiredJSONObjectArg(dataArg, f.IO.In, "--data")
+			if err != nil {
+				return err
+			}
+
+			return runModelClassMethodCall(cmd, f, gf, args[0], "aiUpdate", map[string]any{
+				"qfilter":      filter,
+				"updateData":   data,
+				"triggerEvent": triggerEvent,
+			})
+		},
+	}
+
+	cmd.Flags().StringVar(&filterArg, "filter", "", `更新过滤条件 Q 表达式字符串，例如 Q("id","=",1)`)
+	cmd.Flags().StringVar(&dataArg, "data", "", "更新数据 JSON 对象；传 @- 表示从 stdin 读取")
+	cmd.Flags().IntVar(&triggerEvent, "trigger-event", 1, "是否触发事件，1 开启，0 关闭")
+	return cmd
+}
+
+func newModelDeleteCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
+	var filterArg string
+	var triggerEvent int
+
+	cmd := &cobra.Command{
+		Use:   "delete <fullName>",
+		Short: "删除模型记录",
+		Long: helpSections(
+			helpSection(
+				"这是什么",
+				"按 AI 原子删除协议调用 `<modelPath>/aiDelete`，按过滤条件删除模型记录。",
+			),
+			helpSection(
+				"什么时候使用",
+				"当你已经知道模型 fullName，并且要按条件删除业务数据时使用。",
+			),
+			helpSection(
+				"输入说明",
+				"位置参数是模型 fullName，例如 `models.Customer`。",
+				"`--filter` 必须是非空 Q 表达式字符串。",
+				"`--trigger-event` 控制是否触发事件，默认 1。",
+			),
+			helpSection(
+				"数据来源",
+				"会实际请求目标模型的 `aiDelete` 接口，请求体中包含 `qfilter` 和 `triggerEvent`。",
+			),
+			helpSection(
+				"输出说明",
+				"输出后端返回的原始 JSON，不做二次包装。",
+			),
+		),
+		Example: helpExamples(
+			helpExample{
+				Description: "按条件删除 Customer 记录",
+				Command:     `jit model delete models.Customer --filter 'Q("id","=",1)'`,
+			},
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			filter, err := requireNonEmptyFilter(filterArg)
+			if err != nil {
+				return err
+			}
+
+			return runModelClassMethodCall(cmd, f, gf, args[0], "aiDelete", map[string]any{
+				"qfilter":      filter,
+				"triggerEvent": triggerEvent,
+			})
+		},
+	}
+
+	cmd.Flags().StringVar(&filterArg, "filter", "", `删除过滤条件 Q 表达式字符串，例如 Q("id","=",1)`)
+	cmd.Flags().IntVar(&triggerEvent, "trigger-event", 1, "是否触发事件，1 开启，0 关闭")
+	return cmd
+}
+
+func parseRequiredJSONObjectArg(dataArg string, in io.Reader, flagName string) (map[string]any, error) {
+	if strings.TrimSpace(dataArg) == "" {
+		return nil, NewCLIError("missing_data", fmt.Sprintf("%s is required", flagName))
+	}
+
+	raw, err := parseJSONArg(dataArg, in)
+	if err != nil {
+		return nil, NewCLIError("invalid_data", err.Error())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil || payload == nil {
+		return nil, NewCLIError("invalid_data", fmt.Sprintf("%s must be a JSON object", flagName))
+	}
+	return payload, nil
+}
+
+func parseOptionalJSONArrayArg(dataArg string, flagName string) ([]any, error) {
+	raw := strings.TrimSpace(dataArg)
+	if raw == "" || strings.EqualFold(raw, "null") {
+		return nil, nil
+	}
+
+	var payload []any
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil || payload == nil {
+		key := "invalid_" + strings.TrimPrefix(flagName, "--")
+		return nil, NewCLIError(key, fmt.Sprintf("%s must be a JSON array", flagName))
+	}
+	return payload, nil
+}
+
+func optionalFilterValue(dataArg string) any {
+	value := strings.TrimSpace(dataArg)
+	if value == "" || strings.EqualFold(value, "null") {
+		return nil
+	}
+	return value
+}
+
+func newModelClassMethodBody(payload map[string]any) json.RawMessage {
+	body, _ := json.Marshal(map[string]any{
+		"methodType": "cls",
+		"argDict":    payload,
+	})
+	return body
+}
+
+func requireNonEmptyFilter(dataArg string) (string, error) {
+	value := strings.TrimSpace(dataArg)
+	if value == "" || strings.EqualFold(value, "null") {
+		return "", NewCLIError("missing_filter", "--filter is required")
+	}
+	return value, nil
+}
+
+func runModelClassMethodCall(
+	cmd *cobra.Command,
+	f *Factory,
+	gf *GlobalFlags,
+	fullName string,
+	methodName string,
+	payload map[string]any,
+) error {
+	body := newModelClassMethodBody(payload)
+	endpoint := fmt.Sprintf("%s/%s", modelPath(fullName), methodName)
+	return runModelSvcCall(cmd, f, gf, endpoint, body)
 }
 
 func runModelSvcCall(cmd *cobra.Command, f *Factory, gf *GlobalFlags, endpoint string, body json.RawMessage) error {

@@ -1,6 +1,6 @@
 ---
 name: jit
-description: 通过内置 jit CLI 检查或操作 JIT 后端，涵盖登录、app 元数据、模型、服务、原始 API 与 TQL/Q 查询；适用于用户提到 jit、JIT 后端、auth、profile、app refresh、model、service、api、`jit model tql` 或 `jit model query` 时。
+description: 通过内置 jit CLI 检查或操作 JIT 后端，涵盖登录、app 元数据、模型、服务、原始 API 与明细/分析查询；适用于用户提到 jit、JIT 后端、auth、profile、app refresh、model、service、api、`jit model analyze` 或 `jit model query` 时。
 ---
 
 # jit
@@ -19,8 +19,9 @@ description: 通过内置 jit CLI 检查或操作 JIT 后端，涵盖登录、ap
 - `jit auth ...` 用于登录、profile 管理和身份检查。
 - `jit app ...` 用于 app 元数据刷新和检查。
 - 在写查询前，用 `jit model ls|get` 检查模型和字段。
-- `jit model tql` 用于直接执行 TQL。
-- `jit model query --filter '<Q expression>'` 用于基于 Q 表达式的模型查询。
+- `jit model query` 用于读取模型明细数据，支持 `--filter`、`--fields`、`--order`、`--page`、`--size` 和 `--level`。
+- `jit model create|update|delete` 用于原子写操作。
+- `jit model analyze` 用于直接执行 TQL 统计与分析查询。
 - `jit service ...` 用于服务发现和服务调用。
 - `jit api ...` 用于原始后端 API 调用。
 

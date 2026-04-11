@@ -134,8 +134,11 @@ jit app refresh
 jit model ls
 jit model ls --all
 jit model get wanyun.crm.Customer
-jit model tql 'select * from models.Customer limit 10'
-jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --page 1 --size 10 --app erp_demo/ErpApp
+jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --fields '["id","name"]' --order '[["id",-1]]' --page 1 --size 20 --app erp_demo/ErpApp
+jit model create wanyun.crm.Customer --data '{"name":"Alice"}'
+jit model update wanyun.crm.Customer --filter 'Q("id","=",1)' --data '{"name":"Bob"}'
+jit model delete wanyun.crm.Customer --filter 'Q("id","=",1)'
+jit model analyze 'Select([F("id"), F("name")], From(["models.Customer"]), Limit(0, 10))'
 ```
 
 `jit model` 说明：
@@ -146,8 +149,9 @@ jit model query wanyun.crm.Customer --filter 'Q("name", "=", "Alice")' --page 1 
 - 传入 `jit model ls --all` 时，会把 `extendApps` 中集成进来的模型也一起列出。
 - 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
 - `jit model get` 仍然调用 `ModelSvc/getModelInfo`，完整字段定义以后端接口为准。
-- `jit model tql` 通过 `ModelSvc/aiSelect` 执行 TQL 查询。
-- `jit model query --filter` 传的是 Q 表达式字符串；省略时会按空过滤查询，不再把过滤条件当作 JSON 对象发送。
+- `jit model query` 调用模型的 `aiQuery`，适合读取明细列表；`--filter` 传的是 Q 表达式字符串，`--fields` 和 `--order` 传 JSON 数组字符串。
+- `jit model create`、`jit model update`、`jit model delete` 分别调用 `aiCreate`、`aiUpdate`、`aiDelete`。
+- `jit model analyze` 通过 `ModelSvc/aiSelect` 执行 TQL 统计与分析查询。
 
 `jit service` 说明：
 

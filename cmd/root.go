@@ -50,7 +50,7 @@ func NewRootCmd(f *Factory) *cobra.Command {
 				"切换本地上下文：先 `jit auth ls`，再 `jit auth use <profile|index>`。",
 				"刷新当前 app 的元素目录缓存：`jit app refresh`。",
 				"浏览当前 app 暴露的元素：`jit app ls`。",
-				"查看模型定义：`jit model get <fullName>`；查询模型数据：`jit model query <fullName>`；只有已经明确要用 TQL 表达式时再用 `jit model tql <expr>`。",
+				"查看模型定义：`jit model get <fullName>`；读取模型明细：`jit model query <fullName>`；执行统计或分析查询：`jit model analyze <tql>`。",
 				"调用服务函数：`jit service call <fullName> <functionName>`。",
 				"上层快捷命令不适用时，使用 `jit api <endpoint>` 直接访问接口。",
 			),
