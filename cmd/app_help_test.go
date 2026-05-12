@@ -8,7 +8,7 @@ import (
 func TestAppHelpListsSubcommands(t *testing.T) {
 	out := runHelpForTest(t, []string{"app", "--help"})
 
-	for _, name := range []string{"refresh", "get", "ls"} {
+	for _, name := range []string{"refresh", "get", "ls", "build"} {
 		if !strings.Contains(out, "\n  "+name+" ") {
 			t.Fatalf("expected help to contain %q, got: %s", name, out)
 		}

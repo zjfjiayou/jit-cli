@@ -21,16 +21,17 @@ type elementSummary struct {
 func newAppCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "app",
-		Short: "应用缓存管理与元素查看",
+		Short: "应用缓存、元素查看与全量构建",
 		Long: helpSections(
 			helpSection(
 				"这组命令是什么",
-				"`app` 这组命令围绕 appInfo 缓存工作。appInfo 是前端暴露的应用元素目录，里面会列出模型、服务和其它元素的基础定义。",
-				"`app refresh` 负责把这个目录拉到本地，`app get` 和 `app ls` 则负责读取本地缓存。",
+				"`app` 这组命令主要围绕 appInfo 缓存工作。appInfo 是前端暴露的应用元素目录，里面会列出模型、服务和其它元素的基础定义。",
+				"`app refresh` 负责把这个目录拉到本地，`app get` 和 `app ls` 负责读取本地缓存，`app build` 保留当前应用的全量构建入口。",
 			),
 			helpSection(
 				"什么时候使用",
 				"第一次接入一个 app、切换到另一个 app、或者怀疑模型/服务目录已经变化时，先用这组命令建立或刷新本地视图。",
+				"如果需要对开发态应用做全量构建，也使用 `app build`。",
 			),
 			helpSection(
 				"默认上下文",
@@ -40,6 +41,7 @@ func newAppCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 			helpSection(
 				"如果它不适合",
 				"如果你需要的是实时模型字段定义，改用 `jit model get`。",
+				"如果你要读取或保存元素源码，改用 `jit element ...`。",
 				"如果你已经知道目标 endpoint，改用 `jit api` 或 `jit service call`。",
 			),
 		),
@@ -58,6 +60,7 @@ func newAppCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 	cmd.AddCommand(newAppRefreshCmd(f, gf))
 	cmd.AddCommand(newAppGetCmd(f, gf))
 	cmd.AddCommand(newAppLsCmd(f, gf))
+	cmd.AddCommand(newAppBuildCmd(f, gf))
 	return cmd
 }
 
@@ -256,6 +259,53 @@ func newAppLsCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
 				"appId":    cached.App.AppID,
 				"elements": items,
 			}, gf.JQ)
+		},
+	}
+}
+
+func newAppBuildCmd(f *Factory, gf *GlobalFlags) *cobra.Command {
+	return &cobra.Command{
+		Use:   "build",
+		Short: "全量构建当前应用",
+		Long: helpSections(
+			helpSection(
+				"这是什么",
+				"调用 `ElementSvc/buildApp`，对当前目标 app 做一次全量构建。",
+			),
+			helpSection(
+				"什么时候使用",
+				"当元素定义或源码变化较多，或者增量构建无法覆盖当前状态时使用。",
+			),
+			helpSection(
+				"默认上下文",
+				"默认使用当前 profile 的 default_app。",
+				"通常应把 `--app` 指向部署了 `services.ElementSvc` 的开发态应用。",
+			),
+			helpSection(
+				"副作用",
+				"会触发后端 Builder 全量构建当前 app，并刷新入口 App 快照。",
+			),
+			helpSection(
+				"输出说明",
+				"输出后端返回的原始 JSON；成功时通常是空对象或 `errcode:0` 响应。",
+			),
+			helpSection(
+				"如果它不适合",
+				"如果只需要构建一个或几个元素，改用 `jit element build <fullName>`。",
+			),
+		),
+		Example: helpExamples(
+			helpExample{
+				Description: "全量构建当前 profile 默认 app",
+				Command:     "jit app build",
+			},
+			helpExample{
+				Description: "预览将要调用的全量构建请求",
+				Command:     "jit app build --dry-run",
+			},
+		),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runElementSvcCall(cmd, f, gf, elementSvcBuildApp, map[string]any{})
 		},
 	}
 }

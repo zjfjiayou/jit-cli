@@ -11,7 +11,7 @@
 resources/skills/builtin/jit/SKILL.md
 ```
 
-这份 skill 面向已经安装好 `jit` CLI 的 Agent 运行环境，约束 Agent 先查本地 help，再按 `auth`、`app`、`model`、`service`、`api` 等命令族选择正确命令，避免凭记忆臆造参数或查询语法。
+这份 skill 面向已经安装好 `jit` CLI 的 Agent 运行环境，约束 Agent 先查本地 help，再按 `auth`、`app`、`element`、`model`、`service`、`api` 等命令族选择正确命令，避免凭记忆臆造参数或查询语法。
 
 如果任务涉及 TQL 或 Q 表达式，skill 还会引用同目录下的参考文档：
 
@@ -110,12 +110,25 @@ jit api services/JitAISvc/sendMessage --data '{"assistantId":"a","chatId":"c","m
 jit api auths/loginTypes/services/AuthSvc/listCliTokens --app wanyun/JitAi
 ```
 
-AppInfo 缓存相关命令：
+应用缓存与构建相关命令：
 
 ```bash
 jit app refresh
 jit app get
 jit app ls
+jit app build
+```
+
+开发态元素源码命令：
+
+```bash
+jit element ls
+jit element get services.ElementSvc --resources '["service.py","e.json"]'
+jit element save services.DemoSvc --resources '{"service.py":"print(\"hi\")"}'
+jit element apply --data @- < element-list.json
+jit element build services.DemoSvc
+jit element search ElementSvc
+jit element knowledge services.ElementSvc
 ```
 
 服务快捷命令：
@@ -160,6 +173,18 @@ jit model analyze 'Select([F("id"), F("name")], From(["models.Customer"]), Limit
 - 某些实际可调用的服务不会出现在列表里，例如来源于继承链、且在源 app 中被标记为 `private` 的服务；这类服务仍可以通过 `jit service call` 或 `jit api` 直接调用。
 - `jit service call` 仅在元素命中缓存时校验 `functionName`；如果元素不在缓存中，则跳过预校验，最终以后端返回结果为准。
 - 切换 app 或后端元素定义发生变化后，建议重新执行 `jit app refresh`。
+
+`jit element` 说明：
+
+- `jit element` 面向部署了 `services.ElementSvc` 的开发态应用，用于元素源码读写、构建和检索。
+- `jit element ls` 调用 `ElementSvc/getElementTree`，返回后端元素树，不依赖本地 appInfo 缓存。
+- `jit element get` 调用 `ElementSvc/getElementResource`，按 `fullName` 读取元素源码资源；`--resources` 和 `--ignore` 都传 JSON 字符串数组。
+- `jit element save` 调用 `ElementSvc/saveElementResource`，写入单个元素的资源文件并触发元素构建；`--resources` 是文件名到内容的 JSON 对象。
+- `jit element apply` 调用 `ElementSvc/saveElement`，用于批量保存 `ePath/define/resources` 元素列表并统一构建。
+- `jit element build` 调用 `ElementSvc/buildElement`，只构建指定元素；全量构建当前应用用 `jit app build`。
+- `jit element search` 调用 `ElementSvc/searchContent`，按正则检索应用源码内容。
+- `jit element knowledge` 调用 `ElementSvc/getElementKnowledge`，读取元素面向 AI 的知识描述。
+- 破坏性裸文件操作（删除、重命名、批量替换等）不作为默认命令面暴露；确需使用时走 `jit api` 明确调用。
 
 全局参数：
 

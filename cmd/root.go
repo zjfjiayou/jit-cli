@@ -35,6 +35,7 @@ func NewRootCmd(f *Factory) *cobra.Command {
 				"profile：保存在本地的一组连接上下文，至少包含 server、default_app 和 token 存储位置。",
 				"app：要访问的业务应用，格式为 `org/app`。大多数命令默认读取当前 profile 的 default_app。",
 				"appInfo 缓存：从前端 `appInfo.js` 拉取并保存在本地的元素目录缓存，用来浏览元素，不等同于后端最终可调用全集。",
+				"element：开发态元素源码和声明资源，通常由 IDEAppBackend 的 ElementSvc 负责读取、保存和构建。",
 				"model：数据模型元素，可用于查看定义或查询业务数据。",
 				"service：带函数列表的可调用元素，可通过标准 API 路径调用函数。",
 				"api：最低层原始调用入口，其它快捷命令本质上是对缓存或 API 的封装。",
@@ -50,6 +51,7 @@ func NewRootCmd(f *Factory) *cobra.Command {
 				"切换本地上下文：先 `jit auth ls`，再 `jit auth use <profile|index>`。",
 				"刷新当前 app 的元素目录缓存：`jit app refresh`。",
 				"浏览当前 app 暴露的元素：`jit app ls`。",
+				"读取或保存开发态元素源码：`jit element get <fullName>` / `jit element save <fullName>`。",
 				"查看模型定义：`jit model get <fullName>`；读取模型明细：`jit model query <fullName>`；执行统计或分析查询：`jit model analyze <tql>`。",
 				"调用服务函数：`jit service call <fullName> <functionName>`。",
 				"上层快捷命令不适用时，使用 `jit api <endpoint>` 直接访问接口。",
@@ -88,6 +90,7 @@ func NewRootCmd(f *Factory) *cobra.Command {
 	root.AddCommand(newAuthCmd(f, gf))
 	root.AddCommand(newAPICmd(f, gf))
 	root.AddCommand(newAppCmd(f, gf))
+	root.AddCommand(newElementCmd(f, gf))
 	root.AddCommand(newModelCmd(f, gf))
 	root.AddCommand(newServiceCmd(f, gf))
 	root.AddCommand(newWhoamiCmd(f, gf))

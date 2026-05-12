@@ -22,6 +22,14 @@ const (
 	memberSvcGetCurrUserInfo = "corps/services/MemberSvc/getCurrUserInfo"
 	modelSvcGetModelInfo     = "models/services/ModelSvc/getModelInfo"
 	modelSvcAISelect         = "models/services/ModelSvc/aiSelect"
+	elementSvcGetResource    = "services/ElementSvc/getElementResource"
+	elementSvcSaveResource   = "services/ElementSvc/saveElementResource"
+	elementSvcSaveElement    = "services/ElementSvc/saveElement"
+	elementSvcBuildElement   = "services/ElementSvc/buildElement"
+	elementSvcBuildApp       = "services/ElementSvc/buildApp"
+	elementSvcGetTree        = "services/ElementSvc/getElementTree"
+	elementSvcSearchContent  = "services/ElementSvc/searchContent"
+	elementSvcGetKnowledge   = "services/ElementSvc/getElementKnowledge"
 )
 
 type GlobalFlags struct {
